@@ -1,36 +1,70 @@
 # HTML to QR
 
-**Put a complete, small HTML page inside a single QR code.** Create the code in your browser, scan it with a phone, and view the reconstructed page without uploading the HTML to a server.
+Create a QR code that carries a small HTML page. Edit and preview the source in your browser, generate and download the QR image, then scan it to rebuild the page locally.
 
-[Open HTML to QR](https://html2qr.vercel.app)
+[Open the hosted app](https://html2qr.vercel.app)
 
-![Diagram showing the two HTML-to-QR encoding methods and the built-in page viewer](assets/encoding-workflows.svg)
+![HTML to QR home screen showing the compressed-link and direct-data-URL options](assets/screenshots/home.png)
+
+## Features
+
+- **Two QR formats:** GZIP-compressed HTML in an app link, or HTML embedded directly in a `data:text/html` URL.
+- **HTML minification:** Optionally removes comments and collapses whitespace before encoding, while preserving the contents of `script`, `pre`, and `textarea` elements.
+- **Live capacity meter:** Shows payload size and remaining capacity for QR error-correction levels L, M, Q, and H. Generation is disabled when the payload exceeds the selected limit.
+- **Live preview:** Opens an inline sandboxed preview that stays in sync as the HTML editor changes.
+- **QR image export:** Downloads generated QR codes as PNG.
+- **Built-in QR scanner:** Opens from the app header and decoded-page toolbar. It requests camera access and fills the available viewport on phone, landscape, and desktop displays. The video uses `object-fit: contain` so the camera image is not cropped.
+- **Optional password protection:** Encrypts compressed payloads with AES-256-GCM and a PBKDF2-SHA-256-derived key. The receiver enters the password to decrypt in the browser. Password fields include show/hide controls.
+- **Sandboxed decoded page:** Reconstructed HTML is displayed in a sandboxed iframe.
+- **Responsive interface:** Workbench controls adapt to narrow screens; the scanner uses the full dynamic viewport and accounts for device safe areas.
+
+![Diagram of compressed and direct data URL encoding paths](assets/encoding-workflows.svg)
 
 ## Encoding methods
 
 Choose how the HTML should travel in the QR code:
 
-- **Compress, then decode on a page:** HTML is optionally minified, compressed with GZIP, and encoded as URL-safe Base64 with the `HTMLQR1:` marker. The QR contains a link to this app with the payload in its URL fragment. When opened, the app decodes the content locally and displays it in a sandboxed iframe. Enter the deployed app URL in the workbench so scanning opens the decoder. The page content is carried by the QR; it is not uploaded to the app's server.
-- **Convert to a data URL:** HTML is optionally minified and embedded directly in a `data:text/html` URL. This needs no hosting or decoder, but supports less HTML because the uncompressed page must fit in the QR. Some scanner apps display data URLs as text; if that happens, copy the URL into a browser address bar.
+- **Compress, then decode on a page:** The app optionally minifies and GZIP-compresses the HTML, then encodes it using URL-safe Base64. The QR holds a link to the app with its payload in the URL fragment. The unencrypted format uses `HTMLQR1:`. Set the hosted-app URL in the workbench so scanning opens the decoder. This mode fits more HTML but needs the decoder app.
+- **Convert to a data URL:** The app optionally minifies the HTML and embeds it directly in a `data:text/html` URL. No decoder or hosted app URL is needed, but the uncompressed content must fit the QR. Some scanner apps show data URLs as text; if so, copy the URL into a browser address bar.
 
-Compressed mode also supports an optional password. When set, the compressed bytes are encrypted with AES-256-GCM using a key derived from the password with PBKDF2-SHA-256; the QR uses the `HTMLQR2:` marker and includes a random salt and IV. The person opening the QR must enter the same password. Encryption does not hide the QR's contents from someone who knows the password, and a weak password may be guessed offline.
+![Compressed workbench with a generated QR image, download control, payload meter, and QR statistics](assets/screenshots/compressed-workbench.png)
 
-The built-in minifier removes comments and collapses whitespace while preserving the contents of `script`, `pre`, and `textarea` elements. You can turn minification off in the workbench.
+### Password encryption
 
-## Create a QR code
+Password protection is available in compressed mode. When enabled, the compressed bytes are encrypted using AES-256-GCM. A key is derived from the password with PBKDF2-SHA-256; a random salt and IV are carried in the encrypted QR payload, marked `HTMLQR2:`. The password itself is never included. The receiving browser prompts for it and supports retrying after an incorrect password.
+
+![Password prompt shown when opening an encrypted QR](assets/screenshots/password-prompt.png)
+
+Password encryption requires Web Crypto in a secure context: use the hosted HTTPS app or localhost. Keep the password separate from the QR. Anyone with the QR and password can read its page, and weak passwords may be guessed offline.
+
+## Create, preview, and save
 
 1. Open [html2qr.vercel.app](https://html2qr.vercel.app).
-2. Choose a method and paste or edit the HTML source.
-3. For compressed mode, confirm the hosted app URL is set. The deployed URL is filled in automatically when using the hosted app.
-4. Choose an error-correction level and whether to minify. Optionally enter a password to encrypt compressed mode.
-5. Use **Live preview** to inspect the current HTML, then select **Generate QR code**.
-6. Use **Download PNG** to save the generated code. The built-in **Scan QR** control is available in the app header and decoded-page toolbar; allow camera access and point it at a code.
+2. Select the compressed or data URL method.
+3. Paste or edit your HTML. In compressed mode, verify the hosted app URL; it is filled in automatically on the hosted site.
+4. Choose whether to minify and select the error-correction level. To protect compressed content, enter a password.
+5. Select **Live preview** to inspect the current HTML. The preview updates as the editor changes and runs in a sandbox.
+6. Select **Generate QR code**, then **Download PNG** to save the generated image.
 
-For encrypted QR codes, enter the password when prompted. Keep it separate from the QR image or link; the app does not store or recover it.
+![Live preview displaying the current HTML beside the editor](assets/screenshots/live-preview.png)
+
+![Direct data URL workbench with a generated QR and download control](assets/screenshots/data-url-workbench.png)
+
+## Scan and open
+
+Select **Scan QR** from the app header or decoded-page toolbar and allow camera access. The scanner occupies the full available viewport, including mobile safe areas, and keeps the complete camera frame visible without cropping. Camera access requires HTTPS or localhost and browser permission. The app uses the browser's `BarcodeDetector` when available and a `jsQR` fallback otherwise.
+
+The scanner capture below shows its camera-permission status; when permission is granted, the camera feed occupies the same full-screen area.
+
+![Full-screen mobile QR scanner view and camera status](assets/screenshots/scanner-fullscreen.png)
+
+After scanning a compressed QR, the app decodes its fragment locally and displays the page in a sandboxed iframe. Encrypted codes first request their password.
+
+![Decoded HTML displayed in the app viewer](assets/screenshots/decoded-page.png)
 
 ![Illustration of the four error-correction settings and their maximum byte-mode payload sizes](assets/qr-capacity.svg)
 
-The meter shows the payload size against the selected QR capacity. Higher error correction can make a code more resilient to damage, but leaves room for less data. If a payload exceeds the selected capacity, generation is disabled. Capacity figures are for QR Code Version 40 in byte mode; actual generated codes use the smallest version that fits.
+The meter uses the Version 40 byte-mode maximum for each error-correction level: L 2,953 bytes, M 2,331, Q 1,663, and H 1,273. Higher correction can help a code recover from damage, but leaves less room for data. The generator uses the smallest QR version that fits.
 
 ## Run locally
 
@@ -40,24 +74,25 @@ This is a static browser app. Serve the project directory over HTTP (localhost i
 python3 -m http.server 8000
 ```
 
-Then visit <http://localhost:8000>. Compressed mode and password encryption use the browser's `CompressionStream`, `DecompressionStream`, and Web Crypto APIs. QR generation and camera scanning use libraries loaded from CDNs. Camera access requires HTTPS or localhost and browser permission.
+Then visit <http://localhost:8000>. Compression and decompression use the browser's `CompressionStream` and `DecompressionStream`; password encryption uses Web Crypto. QR generation and the scanner fallback are loaded from CDNs, so those features need an internet connection. Camera access requires HTTPS or localhost and browser permission.
 
 To deploy your own copy, host the files as a static site and use that site's base URL in the compressed-mode URL field. The URL must point to the app that will decode the `HTMLQR1:` fragment.
 
-## Privacy and safety
+## Privacy and security
 
-- HTML is processed in the browser; this app does not send the page source to a backend.
-- Compressed payloads are stored in the QR code's URL fragment, not as server-side page data.
-- Password-protected payloads use AES-GCM authenticated encryption and are decrypted in the browser. The password itself is never put in the QR code.
-- Decoded HTML runs in a sandboxed iframe. The sandbox allows scripts, forms, and popups, but does not grant same-origin access.
-- A QR code is not encryption. Anyone who scans or obtains the code can read its payload. Do not encode secrets or sensitive information.
+- HTML generation, compression, encryption, and decryption happen in the browser; the app does not upload the page source to a backend.
+- Compressed payloads are carried in the QR's URL fragment, not stored as server-side page data.
+- Password-protected payloads use authenticated AES-GCM encryption. The password is not embedded in the code.
+- Decoded HTML runs in a sandboxed iframe that allows scripts, forms, and popups but does not grant same-origin access.
+- Unencrypted QR codes are readable by anyone who obtains them. Do not encode secrets or sensitive data without password protection.
 
 ## Project files
 
-- `index.html` contains the app interface and page structure.
-- `script.js` implements minification, payload encoding/decoding, capacity checks, and QR rendering.
-- `qr-burst.js` defines the animated `<qr-burst>` web component used for the intro.
-- `style.css` contains the responsive interface styles.
+- `index.html` contains the app interface and dialogs.
+- `script.js` implements minification, payload encoding and decoding, encryption, QR rendering, live preview, and camera scanning.
+- `qr-burst.js` defines the animated `<qr-burst>` intro component.
+- `style.css` contains the responsive app, scanner, and dialog styles.
+- `assets/` contains the workflow and capacity illustrations plus rendered app screenshots used in this guide.
 
 ## License
 

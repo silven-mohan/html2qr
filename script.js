@@ -224,11 +224,15 @@ async function startScanner() {
 }
 document.querySelectorAll('[data-open="scannerDialog"]').forEach((button) => {
   button.addEventListener("click", () => {
+    document.documentElement.classList.add("scanner-open");
     $("scannerDialog").showModal();
     startScanner();
   });
 });
-$("scannerDialog").addEventListener("close", stopScanner);
+$("scannerDialog").addEventListener("close", () => {
+  document.documentElement.classList.remove("scanner-open");
+  stopScanner();
+});
 $("scannerDialog").addEventListener("click", (event) => {
   if (event.target === $("scannerDialog")) $("scannerDialog").close();
 });
