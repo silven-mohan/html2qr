@@ -10,8 +10,8 @@ const byteLen = (s) => new TextEncoder().encode(s).length;
 const pipe = (a) => a.map((x) => `<i>${x}</i>`).join("&rsaquo;");
 
 const MODES = {
-  pack: { title: "Compress, then decode on a page", pipe: ["HTML", "GZIP", "Base43", "HTMLQR3/4:", "QR"],
-    sub: "Your HTML is gzipped and encoded in the QR's compact alphanumeric format. Add a password to encrypt it; this app reverses the payload when scanned." },
+  pack: { title: "Compress, then decode on a page", pipe: ["HTML", "GZIP", "Base64", "HTMLQR1/2:", "QR"],
+    sub: "Your HTML is gzipped and encoded in a standard byte-mode QR URL for broad scanner compatibility. Add a password to encrypt it; this app reverses the payload when scanned." },
   url: { title: "Convert to a data URL", pipe: ["HTML", "minify", "data: URL", "QR"],
     sub: "Your HTML becomes a data:text/html URL, and that URL is the QR code." }
 };
@@ -192,22 +192,19 @@ async function buildPayload(measureOnly = false) {
   if (mode === "url") {
     const ascii = /^[\x00-\x7f]*$/.test(body);
     p.url = (ascii ? "data:text/html," : "data:text/html;charset=utf-8,") + encodeBody(body);
-    p.qrEquivalentBytes = p.payloadBytes = p.url.length;
+    p.payloadBytes = byteLen(p.url);
   } else {
     const compressed = await gzip(body), password = encryptionPassword.value;
     const encodedLength = compressed.length + (password ? 44 : 0);
-    const compactLength = base43Length(encodedLength);
-    const compact = password && measureOnly ? "0".repeat(compactLength) : toBase43(password ? await encryptBytes(compressed, password) : compressed);
+    const b64Length = Math.ceil(encodedLength * 4 / 3);
+    const b64 = password && measureOnly ? "A".repeat(b64Length) : toBase64Url(password ? await encryptBytes(compressed, password) : compressed);
     const base = uppercaseHostname($("durl").value.trim().replace(/#.*$/, ""));
-    const prefix = `${base ? `${base}#` : ""}${password ? "HTMLQR4:" : "HTMLQR3:"}`;
-    const prefixBytes = byteLen(prefix);
-    const alphaBits = Math.floor(compact.length / 2) * 11 + (compact.length % 2) * 6;
-    p.gzBytes = compressed.length; p.compactChars = compact.length; p.encrypted = Boolean(password);
-    p.alphanumericPrefix = prefix; p.alphanumericPayload = compact;
-    p.url = prefix + compact;
-    p.qrEquivalentBytes = Math.ceil((prefixBytes * 8 + alphaBits + 37) / 8);
-    p.payloadBytes = p.url.length;
+    const prefix = `${base ? `${base}#` : ""}${password ? "HTMLQR2:" : "HTMLQR1:"}`;
+    p.gzBytes = compressed.length; p.b64Bytes = b64.length; p.encrypted = Boolean(password);
+    p.url = prefix + b64;
+    p.payloadBytes = byteLen(p.url);
   }
+  p.qrEquivalentBytes = p.payloadBytes;
   return p;
 }
 
@@ -216,12 +213,12 @@ async function updateMeter() {
   const p = await buildPayload(true);
   if (id !== seq) return;
   const cap = CAPACITY[ecSelect.value], pct = (p.qrEquivalentBytes / cap) * 100;
-  $("meter-text").textContent = `${fmt(p.payloadBytes)} QR chars · ${fmt(p.qrEquivalentBytes)} / ${fmt(cap)} byte-equivalent (${pct.toFixed(1)}%)`;
+  $("meter-text").textContent = `${fmt(p.payloadBytes)} / ${fmt(cap)} bytes (${pct.toFixed(1)}%)`;
   $("bar-fill").style.width = Math.min(pct, 100) + "%";
   $("meter-cap").textContent = `Max: Version 40-${ecSelect.value}, byte mode`;
   meter.classList.toggle("warn", pct > 70 && pct <= 100);
   meter.classList.toggle("bad", pct > 100);
-  $("meter-free").textContent = pct > 100 ? `Over by ${fmt(p.qrEquivalentBytes - cap)} byte-equivalent` : `${fmt(cap - p.qrEquivalentBytes)} byte-equivalent free`;
+  $("meter-free").textContent = pct > 100 ? `Over by ${fmt(p.payloadBytes - cap)} bytes` : `${fmt(cap - p.payloadBytes)} bytes free`;
   button.disabled = pct > 100 || p.empty;
 }
 
@@ -397,7 +394,8 @@ async function startScanner() {
         let value = "";
         if (detector) {
           try { value = (await detector.detect(video))[0]?.rawValue || ""; } catch {}
-        } else if (window.jsQR) {
+        }
+        if (!value && window.jsQR) {
           value = window.jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" })?.data || "";
         }
         if (value && useScannedValue(value)) return;
@@ -435,10 +433,7 @@ button.addEventListener("click", async () => {
     const p = await buildPayload(), level = ecSelect.value;
     if (p.qrEquivalentBytes > CAPACITY[level]) throw new Error("This HTML is too large for a single QR code.");
     const qr = qrcode(0, level); // 0 = smallest version that fits (easiest to scan)
-    if (p.alphanumericPayload !== undefined) {
-      qr.addData(p.alphanumericPrefix, "Byte");
-      qr.addData(p.alphanumericPayload, "Alphanumeric");
-    } else qr.addData(p.url, "Byte");
+    qr.addData(p.url, "Byte");
     qr.make();
     await drawQR(qr);
     const modules = qr.getModuleCount(), version = (modules - 17) / 4;
@@ -446,10 +441,10 @@ button.addEventListener("click", async () => {
       statCell("Original HTML", `${fmt(p.originalBytes)} bytes`) +
       statCell("After minify", `${fmt(p.minifiedBytes)} bytes`) +
       (mode === "pack"
-        ? statCell("After GZIP", `${fmt(p.gzBytes)} bytes`) + statCell("Base43 payload", `${fmt(p.compactChars)} QR characters`)
+        ? statCell("After GZIP", `${fmt(p.gzBytes)} bytes`) + statCell("After Base64", `${fmt(p.b64Bytes)} bytes`)
         : "") +
       statCell(mode === "pack" ? "QR payload" : "Data URL payload", `${fmt(p.payloadBytes)} characters`) +
-      statCell(`QR capacity (V40-${level})`, `${fmt(CAPACITY[level])} byte-equivalent`) +
+      statCell(`QR capacity (V40-${level})`, `${fmt(CAPACITY[level])} bytes`) +
       statCell("QR version used", `${version} of 40`) +
       statCell("Grid", `${modules} × ${modules} modules`);
     status.textContent = mode === "pack" ? "QR generated. Scan it to open the decoded page." : "QR generated.";

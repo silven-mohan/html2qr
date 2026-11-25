@@ -61,7 +61,7 @@
     <div class="choices">
       <a class="card choice" href="#compress">
         <h3>Compress, then decode on a page</h3>
-        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base43</i>&rsaquo;<i>HTMLQR3/4:</i></div>
+        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base64</i>&rsaquo;<i>HTMLQR1/2:</i></div>
         <p>The HTML is compressed and stored in the QR as a link back to this same app. Scanning opens the app, which unpacks the page and runs it. The data never leaves the QR.</p>
         <div class="tags"><span class="tag">Fits more HTML</span><span class="tag o">Decoded by this app</span></div>
       </a>
@@ -127,7 +127,7 @@
       </label>
       <label class="url" id="packOnly">This app&rsquo;s hosted URL
         <input type="url" id="durl" placeholder="https://your-app.vercel.app" autocomplete="off">
-        <span class="hint">Scanning opens this address, and the app decodes the payload after the <code>#</code>. Set it to your Vercel URL once deployed. Empty gives the bare <code>HTMLQR3:</code> text.</span>
+        <span class="hint">Scanning opens this address, and the app decodes the payload after the <code>#</code>. Set it to your Vercel URL once deployed. Empty gives the bare <code>HTMLQR1:</code> text.</span>
       </label>
       <label class="url" id="passwordOnly">Optional password
         <span class="password-field">

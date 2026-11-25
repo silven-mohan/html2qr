@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 450" role="img" aria-labelledby="title desc">
   <title id="title">Current HTML to QR encoding and safe viewing workflows</title>
-  <desc id="desc">Compressed HTML is optionally minified, GZIP-compressed, optionally encrypted, and encoded as Base43 in an alphanumeric QR segment. HTMLQR3 is unencrypted and HTMLQR4 is encrypted. The hosted app decodes either format and asks before showing the page in a restricted sandbox. The direct data URL path embeds HTML in a QR and can be scanned in the app, which also asks before displaying it.</desc>
+  <desc id="desc">Compressed HTML is optionally minified, GZIP-compressed, optionally encrypted, and Base64-encoded in a single byte-mode URL. HTMLQR1 is unencrypted and HTMLQR2 is encrypted; older compact HTMLQR3 and HTMLQR4 payloads remain supported. The hosted app decodes these formats and asks before showing the page in a restricted sandbox. The direct data URL path embeds HTML in a QR and can be scanned in the app, which also asks before displaying it.</desc>
   <style>
     text{font-family:Arial,sans-serif;fill:#172033}.heading{font-size:20px;font-weight:700}.label{font-size:15px;font-weight:700}.small{font-size:12px;fill:#4c596b}.tiny{font-size:11px;fill:#4c596b}.box{fill:#fff;stroke:#172033;stroke-width:2}.accent{fill:#ff4d6d;stroke:#172033;stroke-width:2}.cool{fill:#e7ebf0;stroke:#172033;stroke-width:2}.safe{fill:#d7f0e9;stroke:#172033;stroke-width:2}.arrow{stroke:#172033;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
   </style>
@@ -12,7 +12,7 @@
 
   <rect x="20" y="56" width="1080" height="220" rx="10" fill="#fff" stroke="#c6ccd5"/>
   <text x="38" y="83" class="label">Compressed app link</text>
-  <text x="38" y="103" class="small">Compact alphanumeric payload; optional encryption protects the compressed bytes.</text>
+  <text x="38" y="103" class="small">Standard byte-mode URL for broad scanner compatibility; optional encryption protects compressed bytes.</text>
   <rect x="40" y="132" width="80" height="56" rx="6" class="cool"/><text x="80" y="165" text-anchor="middle" class="label">HTML</text>
   <path d="M124 160h18" class="arrow"/>
   <rect x="146" y="132" width="108" height="56" rx="6" class="box"/><text x="200" y="156" text-anchor="middle" class="label">Minify</text><text x="200" y="174" text-anchor="middle" class="tiny">optional</text>
@@ -21,15 +21,15 @@
   <path d="M364 160h18" class="arrow"/>
   <rect x="386" y="132" width="108" height="56" rx="6" class="accent"/><text x="440" y="156" text-anchor="middle" class="label">AES-GCM</text><text x="440" y="174" text-anchor="middle" class="tiny">optional</text>
   <path d="M498 160h18" class="arrow"/>
-  <rect x="520" y="132" width="80" height="56" rx="6" class="box"/><text x="560" y="165" text-anchor="middle" class="label">Base43</text>
+  <rect x="520" y="132" width="80" height="56" rx="6" class="box"/><text x="560" y="165" text-anchor="middle" class="label">Base64</text>
   <path d="M604 160h18" class="arrow"/>
-  <rect x="626" y="132" width="142" height="56" rx="6" class="accent"/><text x="697" y="155" text-anchor="middle" class="label">HTMLQR3 / 4</text><text x="697" y="174" text-anchor="middle" class="tiny">URL fragment</text>
+  <rect x="626" y="132" width="142" height="56" rx="6" class="accent"/><text x="697" y="155" text-anchor="middle" class="label">HTMLQR1 / 2</text><text x="697" y="174" text-anchor="middle" class="tiny">URL fragment</text>
   <path d="M772 160h18" class="arrow"/>
-  <rect x="794" y="132" width="112" height="56" rx="6" class="cool"/><text x="850" y="155" text-anchor="middle" class="label">QR code</text><text x="850" y="174" text-anchor="middle" class="tiny">alphanumeric data</text>
+  <rect x="794" y="132" width="112" height="56" rx="6" class="cool"/><text x="850" y="155" text-anchor="middle" class="label">QR code</text><text x="850" y="174" text-anchor="middle" class="tiny">byte data</text>
   <path d="M910 160h18" class="arrow"/>
   <rect x="932" y="132" width="148" height="56" rx="6" class="safe"/><text x="1006" y="155" text-anchor="middle" class="label">Hosted app</text><text x="1006" y="174" text-anchor="middle" class="tiny">decode · confirm · sandbox</text>
-  <text x="40" y="224" class="small">HTMLQR3 = unencrypted · HTMLQR4 = encrypted · HTMLQR1/2 Base64 codes remain supported.</text>
-  <text x="40" y="245" class="tiny">The app-link prefix uses a byte segment; the Base43 payload uses QR alphanumeric mode.</text>
+  <text x="40" y="224" class="small">HTMLQR1 = unencrypted · HTMLQR2 = encrypted · existing HTMLQR3/4 compact codes remain supported.</text>
+  <text x="40" y="245" class="tiny">The complete app URL is encoded as one byte-mode segment for scanner interoperability.</text>
 
   <rect x="20" y="292" width="1080" height="138" rx="10" fill="#fff" stroke="#c6ccd5"/>
   <text x="38" y="319" class="label">Direct data URL</text>
