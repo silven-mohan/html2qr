@@ -17,6 +17,63 @@ const MODES = {
 };
 let mode = "pack", seq = 0, qrDataUrl = "";
 
+const TEMPLATES = {
+  wedding: { title: "Wedding invitation", description: "An elegant invitation with a framed, ivory-paper look.", fields: [["names", "Names", "Aria & Noah"], ["date", "Date", "Saturday, 12 June 2027"], ["time", "Time", "4:00 PM"], ["place", "Venue", "The Willow Garden, Lakeside"], ["email", "RSVP email", "rsvp@example.com", "email"]] },
+  birthday: { title: "Birthday", description: "A bright party poster with a bold age and celebration details.", fields: [["name", "Name", "Maya"], ["age", "Age", "30"], ["date", "Date", "Sun 10 Jan 2027"], ["time", "Time", "6:30 PM"], ["place", "Venue", "Rooftop Cafe, 4th Street"], ["email", "RSVP email", "maya@example.com", "email"]] },
+  business: { title: "Business card", description: "A two-sided personal card with contact details.", fields: [["studio", "Business or studio", "Studio North"], ["role", "Role", "Product Designer"], ["name", "Name", "Alex Morgan"], ["email", "Email", "alex@studio.com", "email"], ["phone", "Phone", "+1 555 010 2030"], ["website", "Website", "studio.com"], ["initials", "Mark / initials", "SN"]] },
+  contact: { title: "Contact card", description: "A profile card with tap-ready phone and email links.", fields: [["initials", "Initials", "SK"], ["name", "Name", "Sam Kumar"], ["role", "Role and organization", "Engineer - Northwind Labs"], ["phone", "Phone", "+1 555 010 2030"], ["email", "Email", "sam@example.com", "email"], ["location", "Location", "Berlin, DE"]] },
+  event: { title: "Event poster", description: "A high-contrast poster with date, venue, and event details.", fields: [["category", "Category", "Meetup"], ["date", "Date", "20 March 2027"], ["name", "Event name", "Open Source Night"], ["time", "Time", "6:00 PM"], ["place", "Venue", "Hub Room 2"], ["details", "Details", "Talks, demos & pizza", "textarea"]] },
+  ticket: { title: "Event ticket", description: "A compact ticket with a detachable seat stub.", fields: [["name", "Event name", "Summer Film Night"], ["date", "Date and time", "Fri 18 Jun 2027 - 8:00 PM"], ["place", "Venue", "Riverside Park"], ["seat", "Seat", "B-14"]] },
+  thanks: { title: "Thank-you card", description: "A warm note for a celebration, gift, or kind gesture.", fields: [["heading", "Heading", "Thank you"], ["message", "Message", "Your kindness made our day so special. We’re so glad you were there.", "textarea"], ["signature", "Sign-off", "Aria & Noah"]] },
+  badge: { title: "Name badge", description: "A classic hello sticker for a conference or gathering.", fields: [["name", "Name", "Jordan"], ["role", "Role or event", "Speaker - DevConf 2027"], ["access", "Access label", "ACCESS - ALL DAYS"]] }
+};
+
+const TEMPLATE_STYLES_BY_ID = {
+  wedding: `body{font-family:Georgia,serif;color:#4a3f2e}.card{padding:14px;background:#fbf6ec;text-align:center}.inside{padding:40px 20px;border:1px solid #b08d57;outline:1px solid #b08d57;outline-offset:-7px}.wedding small{color:#8c7448;text-transform:uppercase;letter-spacing:.2em}.wedding h1{font-size:42px;font-weight:400;font-style:italic;line-height:1.05;margin:14px 0}.rule{color:#b08d57;margin:12px}`,
+  birthday: `body{color:#2b2d42}.card{padding:28px 20px;text-align:center;background:#fff4e0;border-radius:18px}.age{display:grid;place-items:center;width:120px;height:130px;margin:8px auto 22px;border-radius:50%;background:#ff6b6b;color:white;font-size:58px;font-weight:900}.birthday h1{font-size:28px;margin:8px}.accent{color:#e04e4e;font-weight:700}`,
+  business: `body{color:#1f1a17}.card{aspect-ratio:7/4;display:flex;justify-content:space-between;padding:22px;background:#f6f3ee;position:relative;overflow:hidden;border-radius:8px}.business:after{content:"";position:absolute;right:-42px;top:-62px;width:180px;height:180px;border-radius:50%;background:#d9633b}.business>*{position:relative;z-index:1}.business h1{font-size:25px;margin:4px 0}.role{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:#d9633b;font-weight:700}.business p{font-size:12px;line-height:1.6}.mark{align-self:flex-end;width:46px;height:46px;border:2px solid;border-radius:50%;display:grid;place-items:center;font-weight:700}`,
+  contact: `body{color:white}.card{padding:24px;background:radial-gradient(circle at 15% 15%,#ee7c58,transparent 45%),radial-gradient(circle at 90% 15%,#2ec4b6,transparent 48%),#263238;border-radius:20px;text-align:center}.avatar{width:76px;height:76px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;background:#ffd166;color:#263238;font-size:25px;font-weight:800}.contact h1{margin:4px}.links{margin-top:18px;padding:12px;background:#ffffff20;border:1px solid #ffffff55;border-radius:8px;line-height:1.9;overflow-wrap:anywhere}`,
+  event: `body{color:#111}.card{padding:24px;background:#ffe14d;border:3px solid;box-shadow:8px 8px #111;text-transform:uppercase;font-family:Impact,"Arial Black",sans-serif}.label{display:inline-block;padding:4px 10px;background:#111;color:#ffe14d;font-size:13px}.date{font-size:72px;line-height:1;margin:20px 0 8px}.event h1{font-size:32px;line-height:1;margin:8px 0 12px}.event p{font:700 14px/1.5 system-ui,sans-serif;text-transform:none}`,
+  ticket: `body{color:#e2e8f0}.card{display:flex;background:#0f172a;border-radius:12px;overflow:hidden}.main{flex:1;padding:24px}.ticket small{color:#22d3ee;text-transform:uppercase;letter-spacing:.2em}.ticket h1{font-size:25px;color:white}.ticket p{color:#aab5c5}.stub{display:grid;place-content:center;gap:10px;padding:14px;border-left:2px dashed #64748b;text-align:center}.stub b{font-size:25px;color:#22d3ee}@media(max-width:440px){.ticket{flex-direction:column}.stub{border-left:0;border-top:2px dashed #64748b}}`,
+  thanks: `body{color:#3b3228}.card{padding:28px 20px;background:#c9a27a;outline:2px dashed #8b6b49;outline-offset:-10px}.note{padding:34px 20px;background:#fffdf7;text-align:center;box-shadow:0 4px 12px #0002;font-family:"Segoe Script","Bradley Hand",cursive}.thanks h1{font-size:40px;font-weight:400;color:#b4412d;margin:0}.thanks p{font-size:17px;white-space:pre-line}.heart{color:#b4412d;font-size:24px}`,
+  badge: `body{color:#111}.card{width:min(100%,380px);overflow:hidden;background:white;border:1px solid #ddd;border-radius:12px;text-align:center}.head{padding:14px;background:#e11d48;color:white}.head strong{display:block;font-size:34px;letter-spacing:.1em}.name{margin:28px 20px 10px;padding-bottom:7px;border-bottom:2px solid;font:700 38px/1.2 "Segoe Print","Bradley Hand",cursive}.role{color:#666;text-transform:uppercase;letter-spacing:.12em;font-size:12px;padding:4px 10px 22px}.foot{background:#111;color:#eee;padding:9px;font-size:11px;letter-spacing:.12em}`
+};
+const TEMPLATE_BASE = `*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:#f1eee9;font:16px/1.5 system-ui,sans-serif}.card{width:min(100%,520px);box-shadow:0 10px 24px #0002}@media(max-width:440px){body{padding:12px}}`;
+const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
+const lineHTML = (value) => escapeHTML(value).replace(/\r?\n/g, "<br>");
+function templateValues() {
+  return Object.fromEntries([...$("templateForm").querySelectorAll("[data-template-field]")].map((input) => [input.dataset.templateField, input.value]));
+}
+function templateDocument(id, v) {
+  const mail = encodeURIComponent(v.email || "").replace(/%40/gi, "@");
+  const phone = (v.phone || "").replace(/[^+\d]/g, "");
+  const content = {
+    wedding: `<article class="card wedding"><div class="inside"><small>With their families</small><h1>${escapeHTML(v.names)}</h1><p>request the pleasure of your company<br>at their wedding celebration</p><div class="rule">✦ &nbsp; ✿ &nbsp; ✦</div><p><strong>${escapeHTML(v.date)}</strong></p><p>${escapeHTML(v.time)} · ${escapeHTML(v.place)}</p><p><a href="mailto:${mail}">RSVP</a></p></div></article>`,
+    birthday: `<article class="card birthday"><div class="age">${escapeHTML(v.age)}</div><h1>${escapeHTML(v.name)}’s Birthday Bash</h1><p>${escapeHTML(v.date)} · ${escapeHTML(v.time)}<br>${escapeHTML(v.place)}</p><p class="accent"><a href="mailto:${mail}">I’ll be there</a></p></article>`,
+    business: `<article class="card business"><div><div class="role">${escapeHTML(v.role)}</div><h1>${escapeHTML(v.name)}</h1><p>${escapeHTML(v.email)}<br>${escapeHTML(v.phone)}<br>${escapeHTML(v.website)}</p><strong>${escapeHTML(v.studio)}</strong></div><div class="mark">${escapeHTML(v.initials)}</div></article>`,
+    contact: `<article class="card contact"><div class="avatar">${escapeHTML(v.initials)}</div><h1>${escapeHTML(v.name)}</h1><p>${escapeHTML(v.role)}</p><div class="links"><a href="tel:${escapeHTML(phone)}">${escapeHTML(v.phone)}</a><br><a href="mailto:${mail}">${escapeHTML(v.email)}</a><br>${escapeHTML(v.location)}</div></article>`,
+    event: `<article class="card event"><span class="label">${escapeHTML(v.category)}</span><div class="date">${escapeHTML(v.date)}</div><h1>${escapeHTML(v.name)}</h1><p>${escapeHTML(v.time)} · ${escapeHTML(v.place)}</p><p>${lineHTML(v.details)}</p></article>`,
+    ticket: `<article class="card ticket"><div class="main"><small>Admit one</small><h1>${escapeHTML(v.name)}</h1><p>${escapeHTML(v.date)}</p><p>${escapeHTML(v.place)}</p></div><div class="stub"><small>Seat</small><b>${escapeHTML(v.seat)}</b></div></article>`,
+    thanks: `<article class="card thanks"><div class="note"><h1>${escapeHTML(v.heading)}</h1><p>${lineHTML(v.message)}</p><p>— ${escapeHTML(v.signature)}</p><div class="heart">♥</div></div></article>`,
+    badge: `<article class="card badge"><div class="head"><strong>HELLO</strong><span>my name is</span></div><div class="name">${escapeHTML(v.name)}</div><div class="role">${escapeHTML(v.role)}</div><div class="foot">${escapeHTML(v.access)}</div></article>`
+  }[id];
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHTML(TEMPLATES[id].title)}</title><style>${TEMPLATE_BASE}${TEMPLATE_STYLES_BY_ID[id]}</style></head><body>${content}</body></html>`;
+}
+function renderTemplateGallery() {
+  $("templateGrid").innerHTML = Object.entries(TEMPLATES).map(([id, item], index) => `<button class="template-option" type="button" data-template="${id}"><span class="template-mark">0${index + 1}</span><strong>${item.title}</strong><span>${item.description}</span></button>`).join("");
+}
+function renderTemplateEditor(id) {
+  const item = TEMPLATES[id];
+  if (!item) return;
+  $("templateTitle").textContent = item.title;
+  $("templateForm").innerHTML = item.fields.map(([name, label, value, type]) => `<label>${label}${type === "textarea" ? `<textarea data-template-field="${name}">${escapeHTML(value)}</textarea>` : `<input data-template-field="${name}" type="${type || "text"}" value="${escapeHTML(value)}">`}</label>`).join("");
+  updateTemplatePreview(id);
+}
+function updateTemplatePreview(id = location.hash.slice("#template-".length)) {
+  if (!TEMPLATES[id] || !$("templateForm").querySelector("[data-template-field]")) return;
+  $("templatePreview").srcdoc = templateDocument(id, templateValues());
+}
+
 /* ---------- HTML minifier (leaves <script>, <pre>, <textarea> alone) ---------- */
 const STRUCTURAL = "html|head|body|style|script|title|meta|link|div|p|h[1-6]|ul|ol|li|section|main|header|footer|nav|table|tr|td|th|br|hr";
 function minifyHTML(html) {
@@ -378,8 +435,16 @@ function route() {
     return;
   }
   $("viewer").hidden = true;
+  const templateId = h.startsWith("template-") ? h.slice("template-".length) : "";
+  const isTemplateEditor = Boolean(TEMPLATES[templateId]);
+  const isTemplateGallery = h === "templates";
+  templateGallery.hidden = !isTemplateGallery;
+  templateEditor.hidden = !isTemplateEditor;
+  if (isTemplateGallery) renderTemplateGallery();
+  if (isTemplateEditor) renderTemplateEditor(templateId);
   const working = h === "compress" || h === "dataurl";
-  $("home").hidden = working; $("work").hidden = !working; $("back").hidden = !working;
+  $("home").hidden = working || isTemplateGallery || isTemplateEditor;
+  $("work").hidden = !working; $("back").hidden = !working;
   if (working) {
     mode = h === "dataurl" ? "url" : "pack";
     const m = MODES[mode];
@@ -396,6 +461,20 @@ function route() {
   window.scrollTo(0, 0);
 }
 addEventListener("hashchange", route);
+$("templateGrid").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-template]");
+  if (button) location.hash = `template-${button.dataset.template}`;
+});
+$("templateForm").addEventListener("input", () => updateTemplatePreview());
+document.querySelectorAll("[data-template-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const id = location.hash.slice("#template-".length);
+    if (!TEMPLATES[id]) return;
+    editor.value = templateDocument(id, templateValues());
+    clearOutput();
+    location.hash = button.dataset.templateMode;
+  });
+});
 editor.addEventListener("input", updateMeter);
 ecSelect.addEventListener("change", updateMeter);
 minifyBox.addEventListener("change", updateMeter);

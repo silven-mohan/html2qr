@@ -71,6 +71,14 @@
         <div class="tags"><span class="tag">No hosting</span><span class="tag o">Smaller pages only</span></div>
       </a>
     </div>
+    <a class="card templates-card" href="#templates" aria-labelledby="templatesTitle">
+      <div>
+        <p class="template-state">Unlocked &middot; 8 layouts</p>
+        <h2 id="templatesTitle">Templates</h2>
+        <p>Choose a design, fill in its details, and make a QR code.</p>
+      </div>
+      <span class="template-lock" aria-hidden="true">&#8594;</span>
+    </a>
   </section>
 
   <!-- Workbench -->
@@ -149,13 +157,30 @@
 
     <p class="note">Some scanners show a <code>data:</code> link as plain text instead of opening it. If so, copy it into the browser address bar.</p>
   </section>
-  <section class="card templates-card" aria-labelledby="templatesTitle">
-    <div>
-      <p class="template-state">Locked &middot; Coming soon</p>
-      <h2 id="templatesTitle">Templates</h2>
-      <p>Ready-made layouts for event cards, business cards, and more.</p>
+  <section id="templateGallery" hidden>
+    <div class="template-heading">
+      <a class="btn s" href="#home">&larr; Home</a>
+      <div><p class="template-state">Choose a layout</p><h2>Templates</h2></div>
     </div>
-    <span class="template-lock" aria-hidden="true">&#128274;</span>
+    <div class="template-grid" id="templateGrid"></div>
+  </section>
+
+  <section id="templateEditor" class="card template-editor" hidden>
+    <div class="template-heading">
+      <a class="btn s" href="#templates">&larr; All templates</a>
+      <div><p class="template-state">Personalize your design</p><h2 id="templateTitle"></h2></div>
+    </div>
+    <div class="template-editor-grid">
+      <form id="templateForm" class="template-form"></form>
+      <div class="template-preview-wrap">
+        <p class="template-state">Live preview</p>
+        <iframe id="templatePreview" title="Template preview" sandbox="allow-same-origin"></iframe>
+      </div>
+    </div>
+    <div class="actions template-actions">
+      <button class="btn" type="button" data-template-mode="compress">Use with Compress</button>
+      <button class="btn s" type="button" data-template-mode="dataurl">Use with Data URL</button>
+    </div>
   </section>
 </main>
 
