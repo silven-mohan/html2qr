@@ -4,6 +4,8 @@ Create a QR code that carries a small HTML page. Edit and preview the source in 
 
 [Open the hosted app](https://html2qr.vercel.app)
 
+If HTML to QR is useful to you, please [star the repository on GitHub](https://github.com/silven-mohan/html2qr).
+
 ![HTML to QR home screen showing the compressed-link and direct-data-URL options](assets/screenshots/home.png)
 
 ## Features
@@ -13,7 +15,9 @@ Create a QR code that carries a small HTML page. Edit and preview the source in 
 - **Live capacity meter:** Shows payload size and remaining capacity for QR error-correction levels L, M, Q, and H. Generation is disabled when the payload exceeds the selected limit.
 - **Live preview:** Opens an inline sandboxed preview that stays in sync as the HTML editor changes.
 - **QR image export:** Downloads generated QR codes as PNG.
-- **Built-in QR scanner:** Opens from the app header and decoded-page toolbar. It requests camera access and fills the available viewport on phone, landscape, and desktop displays. The video uses `object-fit: contain` so the camera image is not cropped.
+- **Eight editable templates:** Start from invitations, cards, event designs, tickets, or a name badge, edit the fields with a live preview, then continue in either QR encoding mode.
+- **Animated QR intro:** A QR code bursts into particles when the app opens. Skip it at any time; it is automatically skipped when reduced motion is enabled.
+- **Built-in QR scanner:** Opens from the app header and decoded-page toolbar. It requests camera access and fills the available viewport on phone, landscape, and desktop displays. It opens compressed HTMLQR payloads, follows scanned web links, and displays scanned `data:text/html` URLs in the app. The video uses `object-fit: contain` so the camera image is not cropped.
 - **Optional password protection:** Encrypts compressed payloads with AES-256-GCM and a PBKDF2-SHA-256-derived key. The receiver enters the password to decrypt in the browser. Password fields include show/hide controls.
 - **Sandboxed decoded page:** Reconstructed HTML is displayed in a sandboxed iframe.
 - **Responsive interface:** Workbench controls adapt to narrow screens; the scanner uses the full dynamic viewport and accounts for device safe areas.
@@ -49,6 +53,12 @@ Password encryption requires Web Crypto in a secure context: use the hosted HTTP
 ![Live preview displaying the current HTML beside the editor](assets/screenshots/live-preview.png)
 
 ![Direct data URL workbench with a generated QR and download control](assets/screenshots/data-url-workbench.png)
+
+## Use a template
+
+Open **Templates** from the home screen and choose one of eight layouts: wedding invitation, birthday, business card, contact card, event poster, event ticket, thank-you card, or name badge. Fill in the template fields and check the live preview as it updates. Select **Use with Compress** or **Use with Data URL** to carry the finished HTML into that workbench, where you can adjust it further, preview it, and generate the QR code as usual.
+
+Template field values are HTML-escaped before being added to the generated page. Email and phone fields in the contact-card template are linked for quick contact from a phone.
 
 ## Scan and open
 
