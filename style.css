@@ -76,6 +76,7 @@ select,input[type=url]{background:var(--field);color:var(--ink);border:2px solid
 .password-toggle{position:absolute;top:50%;right:5px;display:grid;place-items:center;width:34px;height:34px;padding:6px;transform:translateY(-50%);background:transparent;color:var(--mute);border:0;border-radius:5px;cursor:pointer}
 .password-toggle:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
 .password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.password-toggle[aria-label="Hide password"] .eye-slash{display:none}
 .password-toggle:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
 .hint{font-size:13px;color:var(--mute)}
 .meter{padding:14px;margin:6px 0 18px;border:2px solid var(--ink);border-radius:10px;font:12px var(--mono);color:var(--mute)}
