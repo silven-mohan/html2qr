@@ -43,7 +43,8 @@ a.btn{display:inline-block;text-decoration:none}
 #viewer{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;background:var(--bg)}
 .vbar{display:flex;align-items:center;gap:12px;padding:8px 14px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--card);border-bottom:2px solid var(--ink)}
 .vbar .brand{font-size:14px}.vbar .hint{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#vframe{flex:1;width:100%;border:0;background:#fff}
+.viewer-warning{flex:0 0 auto;padding:10px 14px;background:#ffe5a6;color:#332300;border-bottom:2px solid var(--ink);font-size:14px;font-weight:700}
+#vframe{flex:1;width:100%;min-height:0;border:0;background:#fff}
 @media(max-width:560px){.swap small,.vbar .hint{display:none}}
 .card{background:var(--card);border:2px solid var(--ink);border-radius:14px;box-shadow:6px 6px 0 var(--ink);padding:clamp(16px,4vw,30px)}
 
@@ -157,6 +158,11 @@ select,input[type=url]{background:var(--field);color:var(--ink);border:2px solid
 	#scannerStatus{margin-top:4px}
 }
 .password-modal{height:auto;max-width:440px}
+.confirm-modal{height:auto;max-width:520px}
+.confirm-modal form{margin:0}
+.confirm-content{padding:16px}
+.confirm-content p{margin:0;color:var(--mute)}
+.confirm-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 .password-content{padding:16px}
 .password-content p{margin:0 0 12px}
 .password-content .password-field{width:100%}

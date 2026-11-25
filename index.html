@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HTML to QR</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="qr-burst.js"></script>
@@ -60,7 +61,7 @@
     <div class="choices">
       <a class="card choice" href="#compress">
         <h3>Compress, then decode on a page</h3>
-        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base64</i>&rsaquo;<i>HTMLQR1/2:</i></div>
+        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base43</i>&rsaquo;<i>HTMLQR3/4:</i></div>
         <p>The HTML is compressed and stored in the QR as a link back to this same app. Scanning opens the app, which unpacks the page and runs it. The data never leaves the QR.</p>
         <div class="tags"><span class="tag">Fits more HTML</span><span class="tag o">Decoded by this app</span></div>
       </a>
@@ -126,7 +127,7 @@
       </label>
       <label class="url" id="packOnly">This app&rsquo;s hosted URL
         <input type="url" id="durl" placeholder="https://your-app.vercel.app" autocomplete="off">
-        <span class="hint">Scanning opens this address, and the app decodes the payload after the <code>#</code>. Set it to your Vercel URL once deployed. Empty gives the bare <code>HTMLQR1:</code> text.</span>
+        <span class="hint">Scanning opens this address, and the app decodes the payload after the <code>#</code>. Set it to your Vercel URL once deployed. Empty gives the bare <code>HTMLQR3:</code> text.</span>
       </label>
       <label class="url" id="passwordOnly">Optional password
         <span class="password-field">
@@ -191,7 +192,8 @@
     <button class="btn s" type="button" data-open="scannerDialog">Scan QR</button>
     <a class="btn s" href="#compress">Make your own</a>
   </div>
-  <iframe id="vframe" sandbox="allow-scripts allow-forms allow-popups" title="Decoded page"></iframe>
+  <aside class="viewer-warning" role="note">Untrusted content. Never enter passwords or sensitive information on this page.</aside>
+  <iframe id="vframe" sandbox="allow-scripts" title="Decoded page"></iframe>
 </section>
 
 <dialog id="scannerDialog" class="modal scanner-modal">
@@ -219,6 +221,19 @@
       <div class="password-actions">
         <button class="btn s" type="button" id="cancelUnlock">Cancel</button>
         <button class="btn" type="submit">Unlock</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="runPageDialog" class="modal confirm-modal" aria-labelledby="runPageTitle" aria-describedby="runPageMessage">
+  <form method="dialog">
+    <div class="modal-head"><h2 id="runPageTitle">Run this page?</h2></div>
+    <div class="confirm-content">
+      <p id="runPageMessage">QR content is untrusted. Scripts can run after you continue, but network requests, forms, and popups are restricted. Never enter passwords or sensitive information.</p>
+      <div class="confirm-actions">
+        <button class="btn s" type="submit" value="cancel">Cancel</button>
+        <button class="btn" type="submit" value="run">Run page</button>
       </div>
     </div>
   </form>

@@ -10,8 +10,8 @@ const byteLen = (s) => new TextEncoder().encode(s).length;
 const pipe = (a) => a.map((x) => `<i>${x}</i>`).join("&rsaquo;");
 
 const MODES = {
-  pack: { title: "Compress, then decode on a page", pipe: ["HTML", "GZIP", "Base64", "HTMLQR1/2:", "QR"],
-    sub: "Your HTML is gzipped and Base64-encoded. Add a password to encrypt it; this app reverses the payload when scanned." },
+  pack: { title: "Compress, then decode on a page", pipe: ["HTML", "GZIP", "Base43", "HTMLQR3/4:", "QR"],
+    sub: "Your HTML is gzipped and encoded in the QR's compact alphanumeric format. Add a password to encrypt it; this app reverses the payload when scanned." },
   url: { title: "Convert to a data URL", pipe: ["HTML", "minify", "data: URL", "QR"],
     sub: "Your HTML becomes a data:text/html URL, and that URL is the QR code." }
 };
@@ -110,6 +110,57 @@ function toBase64Url(u8) {
   for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192));
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+const BASE43 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$%*+-./";
+function base43Length(byteLength) { return Math.floor(byteLength / 2) * 3 + (byteLength % 2 ? 2 : 0); }
+function toBase43(bytes) {
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 2) {
+    const single = bytes.length - i === 1;
+    const digits = single ? 2 : 3;
+    let value = single ? bytes[i] : bytes[i] * 256 + bytes[i + 1];
+    let group = "";
+    for (let digit = digits - 1; digit >= 0; digit--) {
+      group = BASE43[value % 43] + group;
+      value = Math.floor(value / 43);
+    }
+    out += group;
+  }
+  return out;
+}
+function fromBase43(text) {
+  if (text.length % 3 === 1) throw new Error("This compact QR payload is invalid.");
+  const bytes = [];
+  for (let i = 0; i < text.length;) {
+    const digits = text.length - i === 2 ? 2 : 3;
+    let value = 0;
+    for (let j = 0; j < digits; j++) {
+      const digit = BASE43.indexOf(text[i++]);
+      if (digit < 0) throw new Error("This compact QR payload contains invalid characters.");
+      value = value * 43 + digit;
+    }
+    if (digits === 2) {
+      if (value > 255) throw new Error("This compact QR payload is invalid.");
+      bytes.push(value);
+    } else {
+      if (value > 65535) throw new Error("This compact QR payload is invalid.");
+      bytes.push(value >>> 8, value & 255);
+    }
+  }
+  return new Uint8Array(bytes);
+}
+function uppercaseHostname(value) {
+  return value.replace(/^([a-z][a-z0-9+.-]*:\/\/)([^/?#]+)/i, (_, scheme, authority) => {
+    const at = authority.lastIndexOf("@");
+    const userInfo = at < 0 ? "" : authority.slice(0, at + 1);
+    return `${scheme.toUpperCase()}${userInfo}${authority.slice(at + 1).toUpperCase()}`;
+  });
+}
+const faviconImage = new Image();
+const faviconReady = new Promise((resolve) => {
+  faviconImage.onload = () => resolve(true);
+  faviconImage.onerror = () => resolve(false);
+});
+faviconImage.src = "assets/favicon.png";
 function getCrypto() {
   if (!globalThis.isSecureContext || !globalThis.crypto?.subtle) {
     throw new Error("Password encryption requires Web Crypto in a secure context. Open this site over HTTPS or use localhost in a supported browser.");
@@ -141,16 +192,22 @@ async function buildPayload(measureOnly = false) {
   if (mode === "url") {
     const ascii = /^[\x00-\x7f]*$/.test(body);
     p.url = (ascii ? "data:text/html," : "data:text/html;charset=utf-8,") + encodeBody(body);
+    p.qrEquivalentBytes = p.payloadBytes = p.url.length;
   } else {
-    const z = await gzip(body), password = encryptionPassword.value;
-    const encodedLength = z.length + (password ? 44 : 0);
-    const b64Length = password && measureOnly ? Math.ceil(encodedLength * 4 / 3) : 0;
-    const b64 = password && measureOnly ? "A".repeat(b64Length) : toBase64Url(password ? await encryptBytes(z, password) : z);
-    const base = $("durl").value.trim().replace(/#.*$/, "");
-    p.gzBytes = z.length; p.b64Bytes = b64.length; p.encrypted = Boolean(password);
-    p.url = (base ? base + "#" : "") + (password ? "HTMLQR2:" : "HTMLQR1:") + b64;
+    const compressed = await gzip(body), password = encryptionPassword.value;
+    const encodedLength = compressed.length + (password ? 44 : 0);
+    const compactLength = base43Length(encodedLength);
+    const compact = password && measureOnly ? "0".repeat(compactLength) : toBase43(password ? await encryptBytes(compressed, password) : compressed);
+    const base = uppercaseHostname($("durl").value.trim().replace(/#.*$/, ""));
+    const prefix = `${base ? `${base}#` : ""}${password ? "HTMLQR4:" : "HTMLQR3:"}`;
+    const prefixBytes = byteLen(prefix);
+    const alphaBits = Math.floor(compact.length / 2) * 11 + (compact.length % 2) * 6;
+    p.gzBytes = compressed.length; p.compactChars = compact.length; p.encrypted = Boolean(password);
+    p.alphanumericPrefix = prefix; p.alphanumericPayload = compact;
+    p.url = prefix + compact;
+    p.qrEquivalentBytes = Math.ceil((prefixBytes * 8 + alphaBits + 37) / 8);
+    p.payloadBytes = p.url.length;
   }
-  p.payloadBytes = p.url.length; // pure ASCII, so chars == bytes
   return p;
 }
 
@@ -158,33 +215,49 @@ async function updateMeter() {
   const id = ++seq;
   const p = await buildPayload(true);
   if (id !== seq) return;
-  const cap = CAPACITY[ecSelect.value], pct = (p.payloadBytes / cap) * 100;
-  $("meter-text").textContent = `${fmt(p.payloadBytes)} / ${fmt(cap)} bytes (${pct.toFixed(1)}%)`;
+  const cap = CAPACITY[ecSelect.value], pct = (p.qrEquivalentBytes / cap) * 100;
+  $("meter-text").textContent = `${fmt(p.payloadBytes)} QR chars · ${fmt(p.qrEquivalentBytes)} / ${fmt(cap)} byte-equivalent (${pct.toFixed(1)}%)`;
   $("bar-fill").style.width = Math.min(pct, 100) + "%";
   $("meter-cap").textContent = `Max: Version 40-${ecSelect.value}, byte mode`;
   meter.classList.toggle("warn", pct > 70 && pct <= 100);
   meter.classList.toggle("bad", pct > 100);
-  $("meter-free").textContent = pct > 100 ? `Over by ${fmt(p.payloadBytes - cap)} bytes` : `${fmt(cap - p.payloadBytes)} bytes free`;
+  $("meter-free").textContent = pct > 100 ? `Over by ${fmt(p.qrEquivalentBytes - cap)} byte-equivalent` : `${fmt(cap - p.qrEquivalentBytes)} byte-equivalent free`;
   button.disabled = pct > 100 || p.empty;
 }
 
 /* ---------- QR rendering ---------- */
-function drawQR(qr) {
+async function drawQR(qr) {
   const count = qr.getModuleCount(), quiet = 4;
   const cell = Math.max(4, Math.floor(360 / (count + quiet * 2)));
   const size = (count + quiet * 2) * cell;
+  const padding = Math.max(16, cell * 2), brandSize = Math.max(28, cell * 6);
+  const footerHeight = brandSize + padding;
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
+  canvas.width = size + padding * 2;
+  canvas.height = size + footerHeight + padding * 2;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#000";
   for (let r = 0; r < count; r++)
     for (let c = 0; c < count; c++)
-      if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
+      if (qr.isDark(r, c)) ctx.fillRect(padding + (c + quiet) * cell, padding + (r + quiet) * cell, cell, cell);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, size + padding, canvas.width, footerHeight + padding);
+  await faviconReady;
+  const fontSize = Math.max(12, Math.round(cell * 2.5)), gap = Math.max(8, cell * 1.5);
+  ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
+  const label = "HTML TO QR", labelWidth = ctx.measureText(label).width;
+  const brandWidth = brandSize + gap + labelWidth;
+  const brandX = (canvas.width - brandWidth) / 2;
+  const brandY = size + padding + (footerHeight - brandSize) / 2;
+  if (faviconImage.naturalWidth) ctx.drawImage(faviconImage, brandX, brandY, brandSize, brandSize);
+  ctx.fillStyle = "#101a2b";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, brandX + brandSize + gap, brandY + brandSize / 2);
   const img = new Image();
   qrDataUrl = canvas.toDataURL("image/png");
   img.src = qrDataUrl;
-  img.alt = "Generated QR code";
+  img.alt = "Generated QR code with HTML to QR branding";
   output.innerHTML = "";
   output.appendChild(img);
   $("downloadQR").href = qrDataUrl;
@@ -246,14 +319,40 @@ function decodeHtmlDataUrl(value) {
   }
   return decodeURIComponent(body);
 }
-function showScannedHtml(html) {
+const approvedPayloads = new Set();
+const UNTRUSTED_CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'">`;
+function secureUntrustedHtml(html) {
+  const doctype = html.match(/^\uFEFF?\s*<!doctype[^>]*>/i);
+  if (!doctype) return UNTRUSTED_CSP + html;
+  const end = doctype[0].length;
+  return html.slice(0, end) + UNTRUSTED_CSP + html.slice(end);
+}
+function confirmPageRun(payloadKey) {
+  if (approvedPayloads.has(payloadKey)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const dialog = $("runPageDialog");
+    dialog.addEventListener("close", () => {
+      const approved = dialog.returnValue === "run";
+      if (approved) approvedPayloads.add(payloadKey);
+      resolve(approved);
+    }, { once: true });
+    dialog.showModal();
+  });
+}
+async function showScannedHtml(html, payloadKey) {
   $("home").hidden = $("work").hidden = $("back").hidden = true;
   $("viewer").hidden = false;
-  $("vframe").srcdoc = html;
-  $("vmsg").textContent = "Opened from scanned data URL and running in a sandbox";
+  $("vframe").srcdoc = "";
+  $("vmsg").textContent = "Reviewing untrusted page";
+  if (!await confirmPageRun(payloadKey)) {
+    $("vmsg").textContent = "Page not run";
+    return;
+  }
+  $("vframe").srcdoc = secureUntrustedHtml(html);
+  $("vmsg").textContent = "Opened from scanned data URL in a restricted sandbox";
 }
 function useScannedValue(value) {
-  if (value.startsWith("HTMLQR1:") || value.startsWith("HTMLQR2:")) {
+  if (["HTMLQR1:", "HTMLQR2:", "HTMLQR3:", "HTMLQR4:"].some((prefix) => value.startsWith(prefix))) {
     stopScanner();
     $("scannerDialog").close();
     location.hash = value;
@@ -268,7 +367,7 @@ function useScannedValue(value) {
       const html = decodeHtmlDataUrl(value);
       stopScanner();
       $("scannerDialog").close();
-      showScannedHtml(html);
+      showScannedHtml(html, value);
       return true;
     } catch (error) {
       $("scannerStatus").textContent = error.message || "Could not open this data URL.";
@@ -334,20 +433,23 @@ button.addEventListener("click", async () => {
   try {
     status.textContent = "Generating QR...";
     const p = await buildPayload(), level = ecSelect.value;
-    if (p.payloadBytes > CAPACITY[level]) throw new Error("This HTML is too large for a single QR code.");
+    if (p.qrEquivalentBytes > CAPACITY[level]) throw new Error("This HTML is too large for a single QR code.");
     const qr = qrcode(0, level); // 0 = smallest version that fits (easiest to scan)
-    qr.addData(p.url, "Byte");
+    if (p.alphanumericPayload !== undefined) {
+      qr.addData(p.alphanumericPrefix, "Byte");
+      qr.addData(p.alphanumericPayload, "Alphanumeric");
+    } else qr.addData(p.url, "Byte");
     qr.make();
-    drawQR(qr);
+    await drawQR(qr);
     const modules = qr.getModuleCount(), version = (modules - 17) / 4;
     stats.innerHTML =
       statCell("Original HTML", `${fmt(p.originalBytes)} bytes`) +
       statCell("After minify", `${fmt(p.minifiedBytes)} bytes`) +
       (mode === "pack"
-        ? statCell("After GZIP", `${fmt(p.gzBytes)} bytes`) + statCell("After Base64", `${fmt(p.b64Bytes)} bytes`)
+        ? statCell("After GZIP", `${fmt(p.gzBytes)} bytes`) + statCell("Base43 payload", `${fmt(p.compactChars)} QR characters`)
         : "") +
-      statCell(mode === "pack" ? "QR payload" : "Data URL payload", `${fmt(p.payloadBytes)} bytes`) +
-      statCell(`QR capacity (V40-${level})`, `${fmt(CAPACITY[level])} bytes`) +
+      statCell(mode === "pack" ? "QR payload" : "Data URL payload", `${fmt(p.payloadBytes)} characters`) +
+      statCell(`QR capacity (V40-${level})`, `${fmt(CAPACITY[level])} byte-equivalent`) +
       statCell("QR version used", `${version} of 40`) +
       statCell("Grid", `${modules} × ${modules} modules`);
     status.textContent = mode === "pack" ? "QR generated. Scan it to open the decoded page." : "QR generated.";
@@ -359,9 +461,10 @@ button.addEventListener("click", async () => {
 
 /* ---------- Built-in decoder: #HTMLQR1:<payload> opens the page packed in the QR ---------- */
 async function unpack(h) {
-  const bin = atob(h.slice(8).replace(/-/g, "+").replace(/_/g, "/"));
-  let bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  if (h.startsWith("HTMLQR2:")) {
+  const compact = h.startsWith("HTMLQR3:") || h.startsWith("HTMLQR4:");
+  const bin = compact ? null : atob(h.slice(8).replace(/-/g, "+").replace(/_/g, "/"));
+  let bytes = compact ? fromBase43(h.slice(8)) : Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  if (h.startsWith("HTMLQR2:") || h.startsWith("HTMLQR4:")) {
     const salt = bytes.slice(0, 16), iv = bytes.slice(16, 28), ciphertext = bytes.slice(28);
     const webCrypto = getCrypto();
     const key = await deriveEncryptionKey($("unlockPassword").value, salt, "decrypt");
@@ -393,7 +496,14 @@ function requestPassword(message) {
 }
 async function showViewer(h) {
   $("viewer").hidden = false;
-  if (h.startsWith("HTMLQR2:")) {
+  $("vframe").srcdoc = "";
+  $("vmsg").textContent = "Reviewing untrusted page";
+  if (!await confirmPageRun(h)) {
+    $("vmsg").textContent = "Page not run";
+    return;
+  }
+  const encrypted = h.startsWith("HTMLQR2:") || h.startsWith("HTMLQR4:");
+  if (encrypted) {
     try { getCrypto(); }
     catch (error) {
       $("vmsg").textContent = error.message;
@@ -402,24 +512,24 @@ async function showViewer(h) {
   }
   let failedAttempts = 0;
   while (true) {
-    $("vmsg").textContent = h.startsWith("HTMLQR2:") ? "Waiting for password..." : "Decoding...";
-    if (h.startsWith("HTMLQR2:")) {
+    $("vmsg").textContent = encrypted ? "Waiting for password..." : "Decoding...";
+    if (encrypted) {
       const password = await requestPassword(failedAttempts ? "That password did not unlock this QR. Try again." : "Enter the password used to encrypt this page.");
       if (password === null) { $("vmsg").textContent = "Encrypted page locked"; return; }
       $("unlockPassword").value = password;
     }
     try {
-      $("vframe").srcdoc = await unpack(h);
+      $("vframe").srcdoc = secureUntrustedHtml(await unpack(h));
       $("unlockPassword").value = "";
-      $("vmsg").textContent = h.startsWith("HTMLQR2:") ? "Decrypted locally and running in a sandbox" : "Decoded from the QR code and running in a sandbox";
+      $("vmsg").textContent = encrypted ? "Decrypted locally in a restricted sandbox" : "Decoded locally in a restricted sandbox";
       return;
     } catch (e) {
-      if (h.startsWith("HTMLQR2:") && e.message?.includes("requires Web Crypto")) {
+      if (encrypted && e.message?.includes("requires Web Crypto")) {
         $("vmsg").textContent = e.message;
         return;
       }
-      if (h.startsWith("HTMLQR2:")) { failedAttempts++; continue; }
-      $("vframe").srcdoc = "<p style='font:16px system-ui;padding:24px'>This link does not hold a valid HTMLQR1 payload.</p>";
+      if (encrypted) { failedAttempts++; continue; }
+      $("vframe").srcdoc = "<p style='font:16px system-ui;padding:24px'>This link does not hold a valid HTMLQR payload.</p>";
       $("vmsg").textContent = "Could not decode";
       return;
     }
@@ -429,7 +539,7 @@ async function showViewer(h) {
 /* ---------- Routing: #home, #compress, #dataurl ---------- */
 function route() {
   const h = location.hash.slice(1);
-  if (h.startsWith("HTMLQR1:") || h.startsWith("HTMLQR2:")) {
+  if (["HTMLQR1:", "HTMLQR2:", "HTMLQR3:", "HTMLQR4:"].some((prefix) => h.startsWith(prefix))) {
     $("home").hidden = $("work").hidden = $("back").hidden = true;
     showViewer(h);
     return;
@@ -496,7 +606,7 @@ route();
   };
   // Scanned payload links, reduced-motion users and a missing component go straight to the app
   if (matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      location.hash.startsWith("#HTMLQR1:") || location.hash.startsWith("#HTMLQR2:") || !customElements.get("qr-burst")) {
+      ["#HTMLQR1:", "#HTMLQR2:", "#HTMLQR3:", "#HTMLQR4:"].some((prefix) => location.hash.startsWith(prefix)) || !customElements.get("qr-burst")) {
     done = true; intro.remove(); return;
   }
   if (/^https?:/.test(location.href)) qr.setAttribute("data", location.href.split("#")[0]);
