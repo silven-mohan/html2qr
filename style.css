@@ -31,6 +31,7 @@ background:repeating-linear-gradient(90deg,currentColor 0 3px,transparent 3px 6p
 /* layout */
 .wrap{position:relative;z-index:1;width:min(94%,860px);margin:0 auto;padding:18px 0 56px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0 30px}
+.top-actions{display:flex;align-items:center;gap:10px}
 .brand{display:inline-flex;align-items:stretch;font:800 17px/1 var(--mono);letter-spacing:.04em;color:var(--ink);text-decoration:none;border:2px solid var(--ink);border-radius:9px;box-shadow:3px 3px 0 var(--ink);overflow:hidden;transition:transform .12s,box-shadow .12s}
 .brand:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
 .brand b{padding:8px 11px}
@@ -70,6 +71,12 @@ textarea{width:100%;height:230px;padding:14px;resize:vertical;background:var(--f
 select,input[type=url]{background:var(--field);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:6px 9px;font:14px var(--sans)}
 .url{flex:1 1 100%;flex-direction:column;align-items:stretch!important;gap:4px!important}
 .url input{width:100%;font-family:var(--mono);font-size:13px}
+.password-field{position:relative;display:block;width:100%}
+.password-field input{width:100%;padding-right:44px;background:var(--field);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:8px 44px 8px 10px;font:14px var(--sans)}
+.password-toggle{position:absolute;top:50%;right:5px;display:grid;place-items:center;width:34px;height:34px;padding:6px;transform:translateY(-50%);background:transparent;color:var(--mute);border:0;border-radius:5px;cursor:pointer}
+.password-toggle:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.password-toggle:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
 .hint{font-size:13px;color:var(--mute)}
 .meter{padding:14px;margin:6px 0 18px;border:2px solid var(--ink);border-radius:10px;font:12px var(--mono);color:var(--mute)}
 .mh,.mf{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -86,8 +93,26 @@ select,input[type=url]{background:var(--field);color:var(--ink);border:2px solid
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.s{padding:7px 14px;font-size:14px;box-shadow:3px 3px 0 var(--ink);background:var(--card);color:var(--ink)}
 #status{margin:14px 0 0;font-size:14px;color:var(--mute)}
+.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 #qr-output{display:flex;justify-content:center;margin:18px auto 6px}
 #qr-output img{width:min(100%,460px);height:auto;image-rendering:pixelated;border:2px solid var(--ink);border-radius:8px;background:#fff}
+#downloadQR{display:block;width:max-content;margin:10px auto 0}
+.modal{width:min(92vw,900px);height:min(86vh,720px);padding:0;background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:10px;box-shadow:8px 8px 0 var(--ink)}
+.modal::backdrop{background:rgba(16,26,43,.68)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:2px solid var(--ink)}
+.modal-head h2{margin:0}
+.preview-panel{margin:14px 0;padding:0;border:2px solid var(--ink);border-radius:8px;overflow:hidden}
+.preview-panel .modal-head{background:var(--card)}
+#previewFrame{display:block;width:100%;height:380px;border:0;background:#fff}
+.scanner-modal{height:auto;max-height:90vh}
+.scanner-content{padding:16px}
+#scannerVideo{display:block;width:100%;max-height:65vh;aspect-ratio:4/3;object-fit:cover;background:#101a2b;border-radius:6px}
+#scannerStatus{margin:10px 0 0}
+.password-modal{height:auto;max-width:440px}
+.password-content{padding:16px}
+.password-content p{margin:0 0 12px}
+.password-content .password-field{width:100%}
+.password-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 #stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:14px}
 #stats div{padding:8px 10px;border:2px solid var(--ink);border-radius:8px;font-size:12px;color:var(--mute)}
 #stats b{display:block;color:var(--ink);font:700 14px var(--mono);margin-top:2px}

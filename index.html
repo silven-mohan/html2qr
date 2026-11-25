@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HTML to QR</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="qr-burst.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -42,7 +43,10 @@
 <main class="wrap">
   <div class="top">
     <a class="brand" href="#home" aria-label="HTML to QR, home"><b>HTML</b><b>QR</b></a>
-    <button type="button" class="btn s swap" id="back" hidden><span aria-hidden="true">&#8644;</span> Change method <small id="swapTo"></small></button>
+    <div class="top-actions">
+      <button type="button" class="btn s" data-open="scannerDialog">Scan QR</button>
+      <button type="button" class="btn s swap" id="back" hidden><span aria-hidden="true">&#8644;</span> Change method <small id="swapTo"></small></button>
+    </div>
   </div>
 
   <!-- Home -->
@@ -56,7 +60,7 @@
     <div class="choices">
       <a class="card choice" href="#compress">
         <h3>Compress, then decode on a page</h3>
-        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base64</i>&rsaquo;<i>HTMLQR1:</i></div>
+        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base64</i>&rsaquo;<i>HTMLQR1/2:</i></div>
         <p>The HTML is compressed and stored in the QR as a link back to this same app. Scanning opens the app, which unpacks the page and runs it. The data never leaves the QR.</p>
         <div class="tags"><span class="tag">Fits more HTML</span><span class="tag o">Decoded by this app</span></div>
       </a>
@@ -94,6 +98,14 @@
 </body>
 </html></textarea>
 
+    <section id="previewPanel" class="preview-panel" hidden>
+      <div class="modal-head">
+        <h2>Live preview</h2>
+        <button class="btn s" type="button" id="previewClose">Hide preview</button>
+      </div>
+      <iframe id="previewFrame" sandbox="allow-scripts allow-forms allow-popups" title="Live HTML preview"></iframe>
+    </section>
+
     <div class="opts">
       <label><input type="checkbox" id="minify" checked> Minify whitespace and comments</label>
       <label>Error correction
@@ -108,6 +120,15 @@
         <input type="url" id="durl" placeholder="https://your-app.vercel.app" autocomplete="off">
         <span class="hint">Scanning opens this address, and the app decodes the payload after the <code>#</code>. Set it to your Vercel URL once deployed. Empty gives the bare <code>HTMLQR1:</code> text.</span>
       </label>
+      <label class="url" id="passwordOnly">Optional password
+        <span class="password-field">
+          <input type="password" id="encryptionPassword" placeholder="Leave empty for no encryption" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-toggle-password="encryptionPassword" aria-label="Show password" title="Show password">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </span>
+        <span class="hint">Encrypts compressed payloads with AES-GCM. The person scanning needs this password to view the page. Passwords are never stored in the QR code.</span>
+      </label>
     </div>
 
     <section class="meter" aria-live="polite">
@@ -116,10 +137,13 @@
       <div class="mf"><span id="meter-free">-</span><span id="meter-cap"></span></div>
     </section>
 
-    <button class="btn" id="generate">Generate QR code</button>
+    <div class="actions">
+      <button class="btn" id="generate">Generate QR code</button>
+      <button class="btn s" id="previewOpen" type="button">Live preview</button>
+    </div>
     <p id="status">Waiting for input...</p>
     <div id="qr-output"></div>
-    <p class="hint" id="saveHint" hidden style="text-align:center;margin:0">Press and hold (or right-click) the code to save it as an image.</p>
+    <a class="btn s" id="downloadQR" hidden download="html-to-qr.png">Download PNG</a>
     <div id="stats"></div>
 
 
@@ -131,10 +155,41 @@
   <div class="vbar">
     <a class="brand" href="#home" aria-label="HTML to QR, home"><b>HTML</b><b>QR</b></a>
     <span class="hint" id="vmsg"></span>
+    <button class="btn s" type="button" data-open="scannerDialog">Scan QR</button>
     <a class="btn s" href="#compress">Make your own</a>
   </div>
   <iframe id="vframe" sandbox="allow-scripts allow-forms allow-popups" title="Decoded page"></iframe>
 </section>
+
+<dialog id="scannerDialog" class="modal scanner-modal">
+  <div class="modal-head">
+    <h2>Scan a QR code</h2>
+    <button class="btn s" type="button" data-close="scannerDialog" aria-label="Close scanner">Close</button>
+  </div>
+  <div class="scanner-content">
+    <video id="scannerVideo" playsinline muted></video>
+    <p id="scannerStatus" class="hint" aria-live="polite">Camera access is needed to scan.</p>
+  </div>
+</dialog>
+
+<dialog id="passwordDialog" class="modal password-modal">
+  <form id="passwordForm">
+    <div class="modal-head"><h2>Unlock QR content</h2></div>
+    <div class="password-content">
+      <p class="hint" id="passwordMessage">Enter the password used to encrypt this page.</p>
+      <span class="password-field">
+        <input type="password" id="unlockPassword" autocomplete="current-password" required aria-label="QR password">
+        <button type="button" class="password-toggle" data-toggle-password="unlockPassword" aria-label="Show password" title="Show password">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </span>
+      <div class="password-actions">
+        <button class="btn s" type="button" id="cancelUnlock">Cancel</button>
+        <button class="btn" type="submit">Unlock</button>
+      </div>
+    </div>
+  </form>
+</dialog>
 
 <script src="script.js"></script>
 </body>
