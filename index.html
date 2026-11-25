@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HTML to QR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="qr-burst.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Intro: one burst-and-reassemble cycle, then the app -->
+<div id="intro" role="presentation">
+  <qr-burst id="introQR" data="https://example.com"></qr-burst>
+  <div class="brand intro-brand" aria-hidden="true"><b>HTML</b><b>QR</b></div>
+  <button type="button" class="btn s" id="skipIntro">Skip</button>
+</div>
+
+<div class="bg" aria-hidden="true">
+  <div class="scan"></div>
+  <div class="finder y" style="top:3%;left:3%"></div>
+  <div class="finder" style="top:58%;right:3%;transform:rotate(90deg)"></div>
+  <div class="finder hs" style="bottom:4%;left:8%;transform:rotate(-90deg)"></div>
+  <div class="ring hs" style="top:30%;right:-4%"></div>
+  <div class="ring y hs" style="bottom:14%;left:-5%;opacity:.5"></div>
+  <div class="barcode" style="top:12%;right:4%"></div>
+  <div class="barcode hs" style="bottom:7%;left:40%"></div>
+  <div class="pixels" style="top:42%;left:1%"></div>
+  <div class="pixels hs" style="top:8%;right:32%;transform:scaleX(-1)"></div>
+  <div class="bits hs" style="top:24%;left:12%">01001000 01010100 01001101 01001100</div>
+  <div class="bits" style="bottom:10%;right:8%">11010010 00101101 10010110 01101001</div>
+  <span class="glyph" style="top:34%;right:9%">&#8984;</span>
+  <span class="glyph hs" style="top:78%;left:4%">&#9626;</span>
+  <span class="glyph hs" style="top:6%;left:46%">&#9698;</span>
+  <span class="glyph" style="bottom:22%;right:30%">&#8251;</span>
+  <i class="br" style="top:14px;right:14px;border-width:3px 3px 0 0"></i>
+  <i class="br" style="bottom:14px;right:14px;border-width:0 3px 3px 0"></i>
+  <i class="br" style="bottom:14px;left:14px;border-width:0 0 3px 3px"></i>
+</div>
+
+<main class="wrap">
+  <div class="top">
+    <a class="brand" href="#home" aria-label="HTML to QR, home"><b>HTML</b><b>QR</b></a>
+    <button type="button" class="btn s swap" id="back" hidden><span aria-hidden="true">&#8644;</span> Change method <small id="swapTo"></small></button>
+  </div>
+
+  <!-- Home -->
+  <section id="home">
+    <h1>Put a whole webpage inside a QR code.</h1>
+    <p class="lead">
+      <span>Paste a small page of HTML and get one QR code that carries every byte of it, with no server storing the page.</span>
+      <span>Scan it and the page rebuilds on the phone itself.</span>
+    </p>
+    <h2>How should the page travel inside the code?</h2>
+    <div class="choices">
+      <a class="card choice" href="#compress">
+        <h3>Compress, then decode on a page</h3>
+        <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base64</i>&rsaquo;<i>HTMLQR1:</i></div>
+        <p>The HTML is compressed and stored in the QR as a link back to this same app. Scanning opens the app, which unpacks the page and runs it. The data never leaves the QR.</p>
+        <div class="tags"><span class="tag">Fits more HTML</span><span class="tag o">Decoded by this app</span></div>
+      </a>
+      <a class="card choice" href="#dataurl">
+        <h3>Convert to a data URL</h3>
+        <div class="pipe"><i>HTML</i>&rsaquo;<i>minify</i>&rsaquo;<i>data: URL</i></div>
+        <p>The HTML is written straight into a <code>data:text/html</code> URL and encoded as the QR. Nothing to host, but the page has to fit uncompressed.</p>
+        <div class="tags"><span class="tag">No hosting</span><span class="tag o">Smaller pages only</span></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Workbench -->
+  <section id="work" class="card" hidden>
+    <h2 id="wtitle" style="font-size:26px;margin-bottom:8px"></h2>
+    <div class="pipe" id="wpipe" style="margin-bottom:10px"></div>
+    <p class="sub" id="wsub"></p>
+
+    <textarea id="editor" spellcheck="false" aria-label="HTML source"><!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background: #111827;
+            color: cyan;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hello from QR!</h1>
+    <p>My first embedded webpage.</p>
+</body>
+</html></textarea>
+
+    <div class="opts">
+      <label><input type="checkbox" id="minify" checked> Minify whitespace and comments</label>
+      <label>Error correction
+        <select id="ec">
+          <option value="L" selected>L, 7% (most data)</option>
+          <option value="M">M, 15%</option>
+          <option value="Q">Q, 25%</option>
+          <option value="H">H, 30%</option>
+        </select>
+      </label>
+      <label class="url" id="packOnly">This app&rsquo;s hosted URL
+        <input type="url" id="durl" placeholder="https://your-app.vercel.app" autocomplete="off">
+        <span class="hint">Scanning opens this address, and the app decodes the payload after the <code>#</code>. Set it to your Vercel URL once deployed. Empty gives the bare <code>HTMLQR1:</code> text.</span>
+      </label>
+    </div>
+
+    <section class="meter" aria-live="polite">
+      <div class="mh"><span>Payload / QR capacity</span><strong id="meter-text">0 / 2,953 bytes</strong></div>
+      <div class="bar"><div id="bar-fill"></div></div>
+      <div class="mf"><span id="meter-free">-</span><span id="meter-cap"></span></div>
+    </section>
+
+    <button class="btn" id="generate">Generate QR code</button>
+    <p id="status">Waiting for input...</p>
+    <div id="qr-output"></div>
+    <p class="hint" id="saveHint" hidden style="text-align:center;margin:0">Press and hold (or right-click) the code to save it as an image.</p>
+    <div id="stats"></div>
+
+
+    <p class="note">Some scanners show a <code>data:</code> link as plain text instead of opening it. If so, copy it into the browser address bar.</p>
+  </section>
+</main>
+
+<section id="viewer" hidden>
+  <div class="vbar">
+    <a class="brand" href="#home" aria-label="HTML to QR, home"><b>HTML</b><b>QR</b></a>
+    <span class="hint" id="vmsg"></span>
+    <a class="btn s" href="#compress">Make your own</a>
+  </div>
+  <iframe id="vframe" sandbox="allow-scripts allow-forms allow-popups" title="Decoded page"></iframe>
+</section>
+
+<script src="script.js"></script>
+</body>
+</html>
