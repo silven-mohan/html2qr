@@ -58,6 +58,11 @@ h2{margin:0 0 14px;font:700 19px var(--serif)}
 .choice:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .choice h3{margin:0;font:800 24px/1.15 var(--serif)}
 .choice p{margin:0;color:var(--mute);font-size:15px}
+.templates-card{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:24px;background:color-mix(in srgb,var(--bg) 72%,var(--card));border-color:var(--mute);box-shadow:4px 4px 0 color-mix(in srgb,var(--mute) 55%,transparent);color:var(--mute)}
+.templates-card h2{margin:0 0 4px;color:var(--mute);font-size:24px}
+.templates-card p{margin:0;color:var(--mute)}
+.template-state{margin-bottom:5px!important;font:700 11px var(--mono);text-transform:uppercase}
+.template-lock{flex:0 0 auto;font-size:26px;filter:grayscale(1)}
 .pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font:12px var(--mono);color:var(--mute)}
 .pipe i{font-style:normal;color:var(--ink);background:var(--field);border:2px solid var(--ink);border-radius:99px;padding:1px 9px}
 .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}

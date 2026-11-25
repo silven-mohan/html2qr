@@ -177,17 +177,49 @@ async function stopScanner() {
   scannerStream = null;
   $("scannerVideo").srcObject = null;
 }
+function decodeHtmlDataUrl(value) {
+  const comma = value.indexOf(",");
+  if (comma < 0) throw new Error("This data URL is incomplete.");
+  const metadata = value.slice(5, comma);
+  if (!/^text\/html(?:;|$)/i.test(metadata)) throw new Error("Only text/html data URLs can be opened here.");
+  const body = value.slice(comma + 1);
+  if (/(?:^|;)base64(?:;|$)/i.test(metadata)) {
+    const binary = atob(body);
+    return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+  }
+  return decodeURIComponent(body);
+}
+function showScannedHtml(html) {
+  $("home").hidden = $("work").hidden = $("back").hidden = true;
+  $("viewer").hidden = false;
+  $("vframe").srcdoc = html;
+  $("vmsg").textContent = "Opened from scanned data URL and running in a sandbox";
+}
 function useScannedValue(value) {
-  stopScanner();
   if (value.startsWith("HTMLQR1:") || value.startsWith("HTMLQR2:")) {
+    stopScanner();
     $("scannerDialog").close();
     location.hash = value;
-  } else if (/^https?:\/\//i.test(value) || /^data:text\/html/i.test(value)) {
+    return true;
+  } else if (/^https?:\/\//i.test(value)) {
+    stopScanner();
     $("scannerDialog").close();
     location.href = value;
-  } else {
-    $("scannerStatus").textContent = `Scanned: ${value}`;
+    return true;
+  } else if (/^data:text\/html/i.test(value)) {
+    try {
+      const html = decodeHtmlDataUrl(value);
+      stopScanner();
+      $("scannerDialog").close();
+      showScannedHtml(html);
+      return true;
+    } catch (error) {
+      $("scannerStatus").textContent = error.message || "Could not open this data URL.";
+      return false;
+    }
   }
+  $("scannerStatus").textContent = `Scanned: ${value}`;
+  return false;
 }
 async function startScanner() {
   const video = $("scannerVideo"), message = $("scannerStatus");
@@ -212,7 +244,7 @@ async function startScanner() {
         } else if (window.jsQR) {
           value = window.jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" })?.data || "";
         }
-        if (value) { useScannedValue(value); return; }
+        if (value && useScannedValue(value)) return;
       }
       scannerFrame = requestAnimationFrame(scan);
     };
