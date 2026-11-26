@@ -6,7 +6,7 @@ Create a QR code that carries a small HTML page. Edit and preview the source in 
 
 If HTML to QR is useful to you, please [star the repository on GitHub](https://github.com/silven-mohan/html2qr).
 
-![HTML to QR home screen showing the compressed-link and direct-data-URL options](assets/screenshots/home.png)
+![Current HTML to QR home screen showing the compressed and data URL options plus the Templates entry](assets/screenshots/home.png)
 
 ## Features
 
@@ -19,7 +19,7 @@ If HTML to QR is useful to you, please [star the repository on GitHub](https://g
 - **Animated QR intro:** A QR code bursts into particles when the app opens. Skip it at any time; it is automatically skipped when reduced motion is enabled.
 - **Built-in QR scanner:** Opens from the app header and decoded-page toolbar. It requests camera access and fills the available viewport on phone, landscape, and desktop displays. It opens compressed HTMLQR payloads, follows scanned web links, and displays scanned `data:text/html` URLs in the app. The video uses `object-fit: contain` so the camera image is not cropped.
 - **Optional password protection:** Encrypts compressed payloads with AES-256-GCM and a PBKDF2-SHA-256-derived key. The receiver enters the password to decrypt in the browser. Password fields include show/hide controls.
-- **Untrusted-page safeguards:** Decoded pages require an explicit run confirmation, stay inside a restricted sandbox, and display a persistent warning not to enter passwords or sensitive information.
+- **Untrusted-page safeguards:** Decoded pages require confirmation. Scripts and automatic refresh redirects are removed; forms, popups, and external resources are blocked. Clicked links may still navigate inside the sandbox, and the persistent warning advises against entering sensitive information.
 - **Responsive interface:** Workbench controls adapt to narrow screens; the scanner uses the full dynamic viewport and accounts for device safe areas.
 
 ![Diagram of the current compressed byte-mode and direct data URL workflows, including scanner confirmation and the restricted sandbox](assets/encoding-workflows.svg)
@@ -29,7 +29,7 @@ If HTML to QR is useful to you, please [star the repository on GitHub](https://g
 Choose how the HTML should travel in the QR code:
 
 - **Compress, then decode on a page:** The app optionally minifies and GZIP-compresses the HTML, then Base64-encodes it in a single byte-mode URL for broad scanner compatibility. The QR holds a link to the app with its payload in the URL fragment. New unencrypted payloads use `HTMLQR1:` and password-encrypted payloads use `HTMLQR2:`. Existing compact `HTMLQR3:` and `HTMLQR4:` Base43 payloads are still supported. Set the hosted-app URL in the workbench so scanning opens the decoder. This mode needs the decoder app.
-- **Convert to a data URL:** The app optionally minifies the HTML and embeds it directly in a `data:text/html` URL. No decoder or hosted app URL is needed, but the uncompressed content must fit the QR. Some scanner apps show data URLs as text; if so, copy the URL into a browser address bar.
+- **Convert to a data URL:** The app optionally minifies the HTML and embeds it directly in a `data:text/html` URL. No decoder or hosted app URL is needed, but the uncompressed content must fit the QR. If another scanner shows the URL as text, use this app's **Scan QR** control to get its confirmation and restricted viewer. Opening the data URL directly bypasses those safeguards.
 
 ![Compressed workbench with a generated QR image, download control, payload meter, and QR statistics](assets/screenshots/compressed-workbench.png)
 
@@ -68,9 +68,9 @@ The scanner capture below shows its camera-permission status; when permission is
 
 ![Full-screen mobile QR scanner view and camera status](assets/screenshots/scanner-fullscreen.png)
 
-After scanning a compressed QR or a `data:text/html` URL, the app asks before running the page. A persistent warning remains above the page. Decoded HTML runs in a sandbox without form or popup permissions and with a CSP that blocks network resources by default; inline scripts and styles are permitted so self-contained pages can work. Encrypted codes first request their password in the app UI, outside the decoded page.
+After scanning a compressed QR or a `data:text/html` URL, the app asks before displaying the page. Decoded scripts and automatic meta-refresh redirects are removed, the iframe sandbox disables scripts, forms, and popups, and a restrictive CSP blocks external subresources and form submissions in the decoded document. Links remain clickable and can navigate the sandboxed frame to another site, so only open links you trust. Encrypted codes first request their password in the app UI, outside the decoded page. Opening a data URL directly in another app or browser bypasses these safeguards.
 
-![Decoded HTML displayed in the app viewer](assets/screenshots/decoded-page.png)
+![Decoded HTML displayed below the persistent untrusted-content warning](assets/screenshots/decoded-page.png)
 
 ![Illustration of the four error-correction settings and their maximum byte-mode payload sizes](assets/qr-capacity.svg)
 
@@ -93,7 +93,7 @@ To deploy your own copy, host the files as a static site and use that site's bas
 - HTML generation, compression, encryption, and decryption happen in the browser; the app does not upload the page source to a backend.
 - Compressed payloads are carried in the QR's URL fragment, not stored as server-side page data.
 - Password-protected payloads use authenticated AES-GCM encryption. The password is not embedded in the code.
-- Decoded HTML requires confirmation and runs in an opaque-origin sandbox with scripts enabled but no form or popup permissions. A restrictive CSP blocks network resources by default; inline scripts and styles are still allowed.
+- Decoded HTML requires confirmation and runs in an opaque-origin sandbox with scripts, forms, and popups disabled. Scripts and automatic meta-refresh redirects are removed before display; a restrictive CSP blocks external subresources and form submissions in the decoded document. Links clicked inside the page can still navigate the sandboxed frame to another site. Opening a data URL outside the app bypasses these protections.
 - The app keeps an untrusted-content warning visible while a decoded page is open. Do not enter passwords or sensitive information into scanned pages.
 - Unencrypted QR codes are readable by anyone who obtains them. Do not encode secrets or sensitive data without password protection.
 

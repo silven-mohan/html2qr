@@ -75,15 +75,12 @@ function updateTemplatePreview(id = location.hash.slice("#template-".length)) {
 }
 
 /* ---------- HTML minifier (leaves <script>, <pre>, <textarea> alone) ---------- */
-const STRUCTURAL = "html|head|body|style|script|title|meta|link|div|p|h[1-6]|ul|ol|li|section|main|header|footer|nav|table|tr|td|th|br|hr";
 function minifyHTML(html) {
   const keep = [];
   let s = html.replace(/<(script|pre|textarea)\b[\s\S]*?<\/\1>/gi, (m) => { keep.push(m); return `\u0001${keep.length - 1}\u0002`; });
   s = s.replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, (m) => m.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s*([{};,>])\s*/g, "$1").replace(/:\s+/g, ":"))
     .replace(/\s+/g, " ")
-    .replace(new RegExp(`\\s+(<\\/?(?:${STRUCTURAL})\\b[^>]*>)`, "gi"), "$1")
-    .replace(new RegExp(`(<\\/?(?:${STRUCTURAL})\\b[^>]*>)\\s+`, "gi"), "$1")
     .trim();
   return s.replace(/\u0001(\d+)\u0002/g, (_, i) => keep[i]);
 }
@@ -111,22 +108,6 @@ function toBase64Url(u8) {
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 const BASE43 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$%*+-./";
-function base43Length(byteLength) { return Math.floor(byteLength / 2) * 3 + (byteLength % 2 ? 2 : 0); }
-function toBase43(bytes) {
-  let out = "";
-  for (let i = 0; i < bytes.length; i += 2) {
-    const single = bytes.length - i === 1;
-    const digits = single ? 2 : 3;
-    let value = single ? bytes[i] : bytes[i] * 256 + bytes[i + 1];
-    let group = "";
-    for (let digit = digits - 1; digit >= 0; digit--) {
-      group = BASE43[value % 43] + group;
-      value = Math.floor(value / 43);
-    }
-    out += group;
-  }
-  return out;
-}
 function fromBase43(text) {
   if (text.length % 3 === 1) throw new Error("This compact QR payload is invalid.");
   const bytes = [];
@@ -204,7 +185,6 @@ async function buildPayload(measureOnly = false) {
     p.url = prefix + b64;
     p.payloadBytes = byteLen(p.url);
   }
-  p.qrEquivalentBytes = p.payloadBytes;
   return p;
 }
 
@@ -212,14 +192,14 @@ async function updateMeter() {
   const id = ++seq;
   const p = await buildPayload(true);
   if (id !== seq) return;
-  const cap = CAPACITY[ecSelect.value], pct = (p.qrEquivalentBytes / cap) * 100;
+  const cap = CAPACITY[ecSelect.value], pct = (p.payloadBytes / cap) * 100;
   $("meter-text").textContent = `${fmt(p.payloadBytes)} / ${fmt(cap)} bytes (${pct.toFixed(1)}%)`;
   $("bar-fill").style.width = Math.min(pct, 100) + "%";
   $("meter-cap").textContent = `Max: Version 40-${ecSelect.value}, byte mode`;
   meter.classList.toggle("warn", pct > 70 && pct <= 100);
   meter.classList.toggle("bad", pct > 100);
   $("meter-free").textContent = pct > 100 ? `Over by ${fmt(p.payloadBytes - cap)} bytes` : `${fmt(cap - p.payloadBytes)} bytes free`;
-  button.disabled = pct > 100 || p.empty;
+  button.disabled = p.payloadBytes > cap || p.empty;
 }
 
 /* ---------- QR rendering ---------- */
@@ -317,12 +297,15 @@ function decodeHtmlDataUrl(value) {
   return decodeURIComponent(body);
 }
 const approvedPayloads = new Set();
-const UNTRUSTED_CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'">`;
 function secureUntrustedHtml(html) {
-  const doctype = html.match(/^\uFEFF?\s*<!doctype[^>]*>/i);
-  if (!doctype) return UNTRUSTED_CSP + html;
-  const end = doctype[0].length;
-  return html.slice(0, end) + UNTRUSTED_CSP + html.slice(end);
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  parsed.querySelectorAll("script").forEach((script) => script.remove());
+  parsed.querySelectorAll('meta[http-equiv="refresh" i]').forEach((meta) => meta.remove());
+  const policy = parsed.createElement("meta");
+  policy.httpEquiv = "Content-Security-Policy";
+  policy.content = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'";
+  parsed.head.prepend(policy);
+  return `<!doctype html>${parsed.documentElement.outerHTML}`;
 }
 function confirmPageRun(payloadKey) {
   if (approvedPayloads.has(payloadKey)) return Promise.resolve(true);
@@ -431,7 +414,7 @@ button.addEventListener("click", async () => {
   try {
     status.textContent = "Generating QR...";
     const p = await buildPayload(), level = ecSelect.value;
-    if (p.qrEquivalentBytes > CAPACITY[level]) throw new Error("This HTML is too large for a single QR code.");
+    if (p.payloadBytes > CAPACITY[level]) throw new Error("This HTML is too large for a single QR code.");
     const qr = qrcode(0, level); // 0 = smallest version that fits (easiest to scan)
     qr.addData(p.url, "Byte");
     qr.make();

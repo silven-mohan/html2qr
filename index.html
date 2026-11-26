@@ -55,14 +55,14 @@
     <h1>Put a whole webpage inside a QR code.</h1>
     <p class="lead">
       <span>Paste a small page of HTML and get one QR code that carries every byte of it, with no server storing the page.</span>
-      <span>Scan it and the page rebuilds on the phone itself.</span>
+      <span>Scan it and view the page on your phone, without sending its source to a server.</span>
     </p>
     <h2>How should the page travel inside the code?</h2>
     <div class="choices">
       <a class="card choice" href="#compress">
         <h3>Compress, then decode on a page</h3>
         <div class="pipe"><i>HTML</i>&rsaquo;<i>GZIP</i>&rsaquo;<i>Base64</i>&rsaquo;<i>HTMLQR1/2:</i></div>
-        <p>The HTML is compressed and stored in the QR as a link back to this same app. Scanning opens the app, which unpacks the page and runs it. The data never leaves the QR.</p>
+        <p>The HTML is compressed and stored in the QR as a link back to this app. Scanning opens the app, which decodes it and displays it after confirmation in a restricted sandbox. The source stays in the QR.</p>
         <div class="tags"><span class="tag">Fits more HTML</span><span class="tag o">Decoded by this app</span></div>
       </a>
       <a class="card choice" href="#dataurl">
@@ -156,7 +156,7 @@
     <div id="stats"></div>
 
 
-    <p class="note">Some scanners show a <code>data:</code> link as plain text instead of opening it. If so, copy it into the browser address bar.</p>
+    <p class="note">Some scanners show a <code>data:</code> link as plain text. Use this app&rsquo;s <strong>Scan QR</strong> button to open it with the confirmation and sandbox; opening the URL directly bypasses those protections.</p>
   </section>
   <section id="templateGallery" hidden>
     <div class="template-heading">
@@ -192,8 +192,8 @@
     <button class="btn s" type="button" data-open="scannerDialog">Scan QR</button>
     <a class="btn s" href="#compress">Make your own</a>
   </div>
-  <aside class="viewer-warning" role="note">Untrusted content. Never enter passwords or sensitive information on this page.</aside>
-  <iframe id="vframe" sandbox="allow-scripts" title="Decoded page"></iframe>
+  <aside class="viewer-warning" role="note">Untrusted content. Never enter passwords or sensitive information. Links may open websites.</aside>
+  <iframe id="vframe" sandbox title="Decoded page"></iframe>
 </section>
 
 <dialog id="scannerDialog" class="modal scanner-modal">
@@ -230,7 +230,7 @@
   <form method="dialog">
     <div class="modal-head"><h2 id="runPageTitle">Run this page?</h2></div>
     <div class="confirm-content">
-      <p id="runPageMessage">QR content is untrusted. Scripts can run after you continue, but network requests, forms, and popups are restricted. Never enter passwords or sensitive information.</p>
+      <p id="runPageMessage">QR content is untrusted. Scripts, forms, popups, and automatic redirects are disabled. Links you open may navigate to websites. Never enter passwords or sensitive information.</p>
       <div class="confirm-actions">
         <button class="btn s" type="submit" value="cancel">Cancel</button>
         <button class="btn" type="submit" value="run">Run page</button>
