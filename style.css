@@ -31,6 +31,9 @@ background:repeating-linear-gradient(90deg,currentColor 0 3px,transparent 3px 6p
 
 /* layout */
 .wrap{position:relative;z-index:1;width:min(94%,860px);margin:0 auto;padding:18px 0 56px}
+.site-footer{position:relative;z-index:1;width:min(94%,860px);margin:-30px auto 0;padding:0 0 24px;text-align:center;color:var(--mute)}
+.site-footer a{color:inherit;text-underline-offset:3px}
+.site-footer a:hover{color:var(--ink)}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0 30px}
 .top-actions{display:flex;align-items:center;gap:10px}
 .brand{display:inline-flex;align-items:stretch;font:800 17px/1 var(--mono);letter-spacing:.04em;color:var(--ink);text-decoration:none;border:2px solid var(--ink);border-radius:9px;box-shadow:3px 3px 0 var(--ink);overflow:hidden;transition:transform .12s,box-shadow .12s}
