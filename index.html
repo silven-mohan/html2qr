@@ -232,6 +232,11 @@
   <iframe id="vframe" sandbox title="Decoded page"></iframe>
 </section>
 
+<dialog id="qrDialog" class="qr-dialog" aria-label="Full-screen QR code">
+  <button class="btn s qr-dialog-close" type="button" data-close="qrDialog" aria-label="Close full-screen QR code">Close</button>
+  <img id="qrExpandedImage" alt="Generated QR code with HTML to QR branding">
+</dialog>
+
 <dialog id="scannerDialog" class="modal scanner-modal">
   <div class="modal-head">
     <h2>Scan a QR code</h2>

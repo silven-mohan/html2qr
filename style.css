@@ -126,10 +126,16 @@ select,input[type=url]{background:var(--field);color:var(--ink);border:2px solid
 #status{margin:14px 0 0;font-size:14px;color:var(--mute)}
 .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 #qr-output{display:flex;justify-content:center;margin:18px auto 6px}
-#qr-output img{width:min(100%,460px);height:auto;image-rendering:pixelated;border:2px solid var(--ink);border-radius:8px;background:#fff}
+#qr-output button{max-width:100%;padding:0;border:0;background:transparent;line-height:0;cursor:zoom-in}
+#qr-output img{display:block;width:min(100%,460px);height:auto;border:2px solid var(--ink);border-radius:8px;background:#fff}
 #downloadQR{display:block;width:max-content;margin:10px auto 0}
 .modal{width:min(92vw,900px);height:min(86vh,720px);padding:0;background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:10px;box-shadow:8px 8px 0 var(--ink)}
 .modal::backdrop{background:rgba(16,26,43,.68)}
+.qr-dialog{position:fixed;inset:0;display:none;align-items:center;justify-content:center;margin:0;width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;padding:56px 12px 12px;border:0;border-radius:0;background:#080b10;box-sizing:border-box}
+.qr-dialog[open]{display:flex}
+.qr-dialog::backdrop{background:#080b10}
+.qr-dialog img{display:block;max-width:100%;max-height:100%;object-fit:contain;background:#fff}
+.qr-dialog-close{position:absolute;top:12px;right:12px;z-index:1}
 .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:2px solid var(--ink)}
 .modal-head h2{margin:0}
 .preview-panel{margin:14px 0;padding:0;border:2px solid var(--ink);border-radius:8px;overflow:hidden}

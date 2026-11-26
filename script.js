@@ -205,7 +205,7 @@ async function updateMeter() {
 /* ---------- QR rendering ---------- */
 async function drawQR(qr) {
   const count = qr.getModuleCount(), quiet = 4;
-  const cell = Math.max(4, Math.floor(360 / (count + quiet * 2)));
+  const cell = Math.max(8, Math.floor(720 / (count + quiet * 2)));
   const size = (count + quiet * 2) * cell;
   const padding = Math.max(16, cell * 2), brandSize = Math.max(28, cell * 6);
   const footerHeight = brandSize + padding;
@@ -236,7 +236,14 @@ async function drawQR(qr) {
   img.src = qrDataUrl;
   img.alt = "Generated QR code with HTML to QR branding";
   output.innerHTML = "";
-  output.appendChild(img);
+  const expand = document.createElement("button");
+  expand.type = "button";
+  expand.id = "qrExpand";
+  expand.setAttribute("aria-label", "Open QR code full screen");
+  expand.title = "Open QR code full screen";
+  expand.appendChild(img);
+  output.appendChild(expand);
+  $("qrExpandedImage").src = qrDataUrl;
   $("downloadQR").href = qrDataUrl;
   $("downloadQR").hidden = false;
 }
@@ -266,6 +273,12 @@ editor.addEventListener("input", () => {
 });
 document.querySelectorAll("[data-close]").forEach((button) => {
   button.addEventListener("click", () => $(button.dataset.close).close());
+});
+output.addEventListener("click", (event) => {
+  if (event.target.closest("#qrExpand")) $("qrDialog").showModal();
+});
+$("qrDialog").addEventListener("click", (event) => {
+  if (event.target === $("qrDialog")) $("qrDialog").close();
 });
 document.querySelectorAll("[data-toggle-password]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -362,16 +375,26 @@ async function startScanner() {
   message.textContent = "Starting camera...";
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera scanning requires HTTPS or localhost.");
-    scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    const track = scannerStream.getVideoTracks()[0];
+    const caps = track.getCapabilities?.() || {};
+    if (caps.focusMode?.includes("continuous")) {
+      await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+    }
     if (!$("scannerDialog").open) { await stopScanner(); return; }
     video.srcObject = scannerStream;
     await video.play();
     message.textContent = "Point the camera at a QR code.";
     const detector = "BarcodeDetector" in window ? new BarcodeDetector({ formats: ["qr_code"] }) : null;
     const canvas = document.createElement("canvas"), context = canvas.getContext("2d", { willReadFrequently: true });
-    const scan = async () => {
+    let lastScanAt = 0;
+    const scan = async (now) => {
       if (!$("scannerDialog").open || !scannerStream) return;
-      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      if (now - lastScanAt >= 120 && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        lastScanAt = now;
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         let value = "";
